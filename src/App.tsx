@@ -187,6 +187,7 @@ export default function App() {
             onToggleFavorite={handleToggleFavorite}
             onSelectPlant={handleSelectPlant}
             currentUser={currentUser}
+            onOpenAuthModal={() => setAuthModalOpen(true)}
           />
         )}
 

@@ -26,12 +26,12 @@ service cloud.firestore {
         && request.resource.data.status == 'active'
         && request.resource.data.email == request.auth.token.email;
       allow read: if isOwner(uid) || isAdmin();
-      // Members may update safe profile fields and their own garden-game save.
+      // Members may update safe profile fields and keep their own plant-quiz history.
       // Role/status/email/uid remain protected from client-side edits.
       allow update: if isOwner(uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'displayName', 'avatarUrl', 'favorites', 'recentlyViewed',
-          'lastLoginAt', 'updatedAt', 'gardenGameSave', 'gardenGameSavedAt'
+          'lastLoginAt', 'updatedAt', 'quizHistory'
         ])
         && request.resource.data.role == resource.data.role
         && request.resource.data.status == resource.data.status
@@ -39,22 +39,9 @@ service cloud.firestore {
         && request.resource.data.uid == resource.data.uid
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['favorites']) || request.resource.data.favorites is list)
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['recentlyViewed']) || (request.resource.data.recentlyViewed is list && request.resource.data.recentlyViewed.size() <= 30))
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['gardenGameSavedAt']) || request.resource.data.gardenGameSavedAt is timestamp)
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['gardenGameSave']) || (
-          request.resource.data.gardenGameSave is map
-          && request.resource.data.gardenGameSave.keys().hasOnly(['version', 'gardenName', 'sceneId', 'plantedPlantIds', 'decorationIds', 'avatarStyle', 'xp'])
-          && request.resource.data.gardenGameSave.version == 1
-          && request.resource.data.gardenGameSave.gardenName is string
-          && request.resource.data.gardenGameSave.gardenName.size() <= 48
-          && request.resource.data.gardenGameSave.sceneId in ['balcony', 'sunroom', 'garden']
-          && request.resource.data.gardenGameSave.plantedPlantIds is list
-          && request.resource.data.gardenGameSave.plantedPlantIds.size() <= 5
-          && request.resource.data.gardenGameSave.decorationIds is list
-          && request.resource.data.gardenGameSave.decorationIds.size() <= 4
-          && request.resource.data.gardenGameSave.avatarStyle in ['gardener', 'sunhat', 'flower']
-          && request.resource.data.gardenGameSave.xp is int
-          && request.resource.data.gardenGameSave.xp >= 0
-          && request.resource.data.gardenGameSave.xp <= 10000
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['quizHistory']) || (
+          request.resource.data.quizHistory is list
+          && request.resource.data.quizHistory.size() <= 10
         ));
       allow delete: if isAdmin();
     }

@@ -186,6 +186,7 @@ export default function App() {
             favorites={currentUser.favorites || []}
             onToggleFavorite={handleToggleFavorite}
             onSelectPlant={handleSelectPlant}
+            currentUser={currentUser}
           />
         )}
 

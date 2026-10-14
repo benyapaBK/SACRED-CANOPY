@@ -442,16 +442,13 @@ class StoreService {
       updated = [...this.currentUser.favorites, plantId];
     }
     this.setUser({ ...this.currentUser, favorites: updated });
-    if (this.currentUser.role !== 'guest') {
-      void updateDoc(doc(db, 'users', this.currentUser.uid), { favorites: updated, updatedAt: serverTimestamp() }).catch((error) => console.warn('Could not sync favorites to Firestore', error));
-    }
-    // Also update in registeredUsers if signed in
-    if (this.currentUser.role !== 'guest') {
-      const reg = this.registeredUsers.find((u) => u.uid === this.currentUser.uid);
-      if (reg) {
-        reg.favorites = updated;
-        this.saveRegisteredUsers();
-      }
+    // The guest guard above narrows the user to a real member/admin account.
+    void updateDoc(doc(db, 'users', this.currentUser.uid), { favorites: updated, updatedAt: serverTimestamp() }).catch((error) => console.warn('Could not sync favorites to Firestore', error));
+    // Also update the in-memory registered user directory.
+    const reg = this.registeredUsers.find((u) => u.uid === this.currentUser.uid);
+    if (reg) {
+      reg.favorites = updated;
+      this.saveRegisteredUsers();
     }
     return !exists;
   }

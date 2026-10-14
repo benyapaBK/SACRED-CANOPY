@@ -78,13 +78,16 @@ export const Header: React.FC<HeaderProps> = ({
               <path d="M12 10l3-3M12 14l-3-3" stroke="#FAF7F0" strokeWidth="1.2" strokeLinecap="round" />
             </svg>
           </div>
-          <div>
+          <div className="flex min-w-0 flex-col justify-center leading-none">
             <div className="font-brand font-bold text-lg sm:text-xl tracking-wider text-[#FAF7F0] group-hover:text-[#C6A96B] transition-colors whitespace-nowrap">
               SACRED CANOPY
             </div>
-            <div className="text-[11px] text-[#A8B89A] tracking-normal font-normal">
+            <div className="mt-1 text-[11px] leading-tight text-[#A8B89A] tracking-normal font-normal">
               ร่มโพธิ์ ร่มไทร · ร่มเงาแห่งสิริมงคล
             </div>
+            <span className={`mt-1 text-[9px] leading-none tracking-[0.16em] uppercase ${currentPage === 'home' ? 'text-[#C6A96B] font-bold' : 'text-[#A8B89A]/80'}`}>
+              Home
+            </span>
           </div>
         </button>
 

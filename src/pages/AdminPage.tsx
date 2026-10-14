@@ -116,8 +116,48 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
 
+  // Registered Users table filters and feedback
+  const [userNameFilter, setUserNameFilter] = useState('');
+  const [userEmailFilter, setUserEmailFilter] = useState('');
+  const [userRoleFeedback, setUserRoleFeedback] = useState('');
+  const [savingUserRoleId, setSavingUserRoleId] = useState<string | null>(null);
+
   // Registered Users list
   const registeredUsers = store.getRegisteredUsers();
+  const filteredRegisteredUsers = registeredUsers.filter((user) => {
+    const nameMatches = user.displayName.toLowerCase().includes(userNameFilter.trim().toLowerCase());
+    const emailMatches = user.email.toLowerCase().includes(userEmailFilter.trim().toLowerCase());
+    return nameMatches && emailMatches;
+  });
+
+  const formatMemberCreatedAt = (value?: string) => {
+    if (!value) return 'ไม่พบวันที่สมัคร';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return 'ไม่พบวันที่สมัคร';
+    return parsed.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  const handleMemberRoleChange = async (uid: string, role: 'member' | 'admin') => {
+    if (uid === currentUser.uid && role !== 'admin') {
+      setUserRoleFeedback('ไม่สามารถลดสิทธิ์บัญชีแอดมินที่กำลังใช้งานอยู่ได้');
+      return;
+    }
+    const target = registeredUsers.find((user) => user.uid === uid);
+    if (!target || target.role === role) return;
+    const confirmed = window.confirm(`ยืนยันเปลี่ยนบทบาท ${target.displayName} (${target.email}) เป็น ${role === 'admin' ? 'Admin' : 'Member'} หรือไม่?`);
+    if (!confirmed) return;
+    setSavingUserRoleId(uid);
+    setUserRoleFeedback('กำลังบันทึกบทบาท...');
+    try {
+      await store.updateUserRole(uid, role);
+      setUserRoleFeedback(`บันทึกบทบาทของ ${target.displayName} สำเร็จ`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'ไม่สามารถเปลี่ยนบทบาทได้';
+      setUserRoleFeedback(`เปลี่ยนบทบาทไม่สำเร็จ: ${message}`);
+    } finally {
+      setSavingUserRoleId(null);
+    }
+  };
 
   const allPlantsWithDeleted = store.getPlants(true);
   const activePlants = allPlantsWithDeleted.filter((p) => !p.deletedAt);
@@ -860,84 +900,109 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       {/* 7. Registered Users Management */}
       {activeTab === 'users' && (
         <div className="space-y-4 animate-in fade-in">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h3 className="text-sm font-bold text-[#183D2B]">
-                รายชื่อสมาชิกและสิทธิ์การใช้งาน (User Management: {registeredUsers.length} บัญชี)
+                ตารางสมาชิกและกำหนดบทบาท ({registeredUsers.length} บัญชี)
               </h3>
-              <p className="text-xs text-[#7A746B]">
-                ผู้ดูแลระบบสามารถปรับบทบาทระหว่าง Member และ Admin หรือระงับการใช้งานได้ที่นี่
+              <p className="mt-1 text-xs text-[#7A746B]">
+                ตรวจสอบชื่อ อีเมล วิธีสมัคร วันที่สมัครครั้งแรก และเลือกว่าใครเป็น Member หรือ Admin
               </p>
             </div>
+            <div className="text-xs text-[#7A746B]">แสดง {filteredRegisteredUsers.length} จาก {registeredUsers.length} บัญชี</div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-[#EEE7DA] shadow-sm overflow-hidden">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-[#49382C]">ค้นหาจากชื่อสมาชิก</span>
+              <div className="flex items-center gap-2 rounded-xl border border-[#EEE7DA] bg-white px-3 py-2.5 focus-within:border-[#C6A96B]">
+                <Search className="h-4 w-4 text-[#A48545]" />
+                <input value={userNameFilter} onChange={(event) => setUserNameFilter(event.target.value)} placeholder="กรอกชื่อสมาชิก" className="w-full bg-transparent text-sm outline-none placeholder:text-[#B8B0A4]" />
+              </div>
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-[#49382C]">ค้นหาจากอีเมล</span>
+              <div className="flex items-center gap-2 rounded-xl border border-[#EEE7DA] bg-white px-3 py-2.5 focus-within:border-[#C6A96B]">
+                <Mail className="h-4 w-4 text-[#A48545]" />
+                <input value={userEmailFilter} onChange={(event) => setUserEmailFilter(event.target.value)} placeholder="กรอกอีเมล" className="w-full bg-transparent text-sm outline-none placeholder:text-[#B8B0A4]" />
+              </div>
+            </label>
+          </div>
+
+          {userRoleFeedback && (
+            <div className={`rounded-xl border px-4 py-3 text-xs ${userRoleFeedback.includes('ไม่สำเร็จ') ? 'border-red-200 bg-red-50 text-red-700' : 'border-[#D7E8D2] bg-[#F1F8EE] text-[#27632A]'}`} role="status">
+              {userRoleFeedback}
+            </div>
+          )}
+
+          <div className="overflow-hidden rounded-2xl border border-[#EEE7DA] bg-white shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#FAF7F0] text-[#7A746B] border-b border-[#EEE7DA]">
+              <table className="w-full min-w-[980px] text-left text-xs">
+                <thead className="border-b border-[#EEE7DA] bg-[#FAF7F0] text-[#7A746B]">
                   <tr>
                     <th className="p-3.5 font-bold">ชื่อสมาชิก</th>
                     <th className="p-3.5 font-bold">อีเมล</th>
-                    <th className="p-3.5 font-bold">ช่องทางสมัคร</th>
-                    <th className="p-3.5 font-bold">บทบาท (Role)</th>
+                    <th className="p-3.5 font-bold">วิธีสมัครเว็บไซต์</th>
+                    <th className="p-3.5 font-bold">วันที่สมัครครั้งแรก</th>
+                    <th className="p-3.5 font-bold">กำหนดบทบาท</th>
                     <th className="p-3.5 font-bold">สถานะบัญชี</th>
-                    <th className="p-3.5 font-bold text-right">การจัดการสิทธิ์</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#EEE7DA]">
-                  {registeredUsers.map((u) => (
-                    <tr key={u.uid} className="hover:bg-[#FAF7F0]/40 transition-colors">
-                      <td className="p-3.5 font-bold text-[#183D2B] flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-[#183D2B] text-[#C6A96B] flex items-center justify-center font-bold text-xs">
-                          {u.displayName.charAt(0).toUpperCase()}
+                  {filteredRegisteredUsers.map((user) => (
+                    <tr key={user.uid} className="transition-colors hover:bg-[#FAF7F0]/60">
+                      <td className="p-3.5">
+                        <div className="flex items-center gap-2.5">
+                          {user.avatarUrl ? (
+                            <img src={user.avatarUrl} alt="" className="h-8 w-8 rounded-full border border-[#EEE7DA] object-cover" />
+                          ) : (
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#183D2B] text-xs font-bold text-[#C6A96B]">
+                              {(user.displayName || '?').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-bold text-[#183D2B]">{user.displayName || 'ไม่ระบุชื่อ'}</div>
+                            {user.uid === currentUser.uid && <div className="mt-0.5 text-[10px] text-[#A48545]">บัญชีที่กำลังใช้งาน</div>}
+                          </div>
                         </div>
-                        <span>{u.displayName}</span>
                       </td>
-                      <td className="p-3.5 text-[#49382C] font-mono">{u.email}</td>
+                      <td className="p-3.5 font-mono text-[#49382C]">{user.email || 'ไม่ระบุอีเมล'}</td>
                       <td className="p-3.5">
-                        <span className={`text-[10px] px-2 py-0.5 rounded font-semibold ${
-                          u.authProvider === 'google' ? 'bg-[#E8F0FE] text-[#1967D2]' : 'bg-[#FAF7F0] text-[#7A746B]'
-                        }`}>
-                          {u.authProvider === 'google' ? 'Google' : 'Email/Pass'}
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${user.authProvider === 'google' ? 'bg-[#E8F0FE] text-[#1967D2]' : 'bg-[#FAF7F0] text-[#7A746B]'}`}>
+                          {user.authProvider === 'google' ? 'Google Sign-in' : 'อีเมลและรหัสผ่าน'}
                         </span>
                       </td>
+                      <td className="p-3.5 whitespace-nowrap text-[#49382C]">{formatMemberCreatedAt(user.createdAt)}</td>
                       <td className="p-3.5">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded font-mono ${
-                          u.role === 'admin' ? 'bg-[#C6A96B] text-[#0F271B]' : 'bg-[#183D2B]/10 text-[#183D2B]'
-                        }`}>
-                          {u.role.toUpperCase()}
-                        </span>
+                        <select
+                          value={user.role === 'admin' ? 'admin' : 'member'}
+                          disabled={savingUserRoleId === user.uid || (user.uid === currentUser.uid && user.role === 'admin')}
+                          onChange={(event) => void handleMemberRoleChange(user.uid, event.target.value as 'member' | 'admin')}
+                          aria-label={`กำหนดบทบาทของ ${user.displayName}`}
+                          className={`min-w-[130px] rounded-lg border px-3 py-2 text-xs font-semibold outline-none focus:border-[#C6A96B] disabled:cursor-not-allowed disabled:opacity-70 ${user.role === 'admin' ? 'border-[#C6A96B] bg-[#FFF8E6] text-[#6B4D0C]' : 'border-[#EEE7DA] bg-white text-[#183D2B]'}`}
+                        >
+                          <option value="member">Member — สมาชิก</option>
+                          <option value="admin" disabled={user.role === 'admin'}>Admin — ผู้ดูแล</option>
+                        </select>
                       </td>
                       <td className="p-3.5">
-                        <span className={`text-[10px] font-medium ${
-                          u.status === 'suspended' ? 'text-[#C62828]' : 'text-[#2E7D32]'
-                        }`}>
-                          {u.status === 'suspended' ? 'ระงับการใช้งาน' : 'ใช้งานปกติ'}
+                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold ${user.status === 'suspended' ? 'text-[#C62828]' : 'text-[#2E7D32]'}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${user.status === 'suspended' ? 'bg-[#C62828]' : 'bg-[#2E7D32]'}`} />
+                          {user.status === 'suspended' ? 'ระงับการใช้งาน' : 'ใช้งานปกติ'}
                         </span>
-                      </td>
-                      <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
-                        {u.role === 'member' ? (
-                          <button
-                            onClick={() => store.updateUserRole(u.uid, 'admin')}
-                            className="px-2.5 py-1 bg-[#183D2B] text-white rounded text-[11px] font-semibold hover:bg-[#25523B]"
-                          >
-                            เลื่อนเป็น Admin
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => store.updateUserRole(u.uid, 'member')}
-                            className="px-2.5 py-1 bg-[#FAF7F0] border border-[#EEE7DA] text-[#7A746B] rounded text-[11px] font-semibold hover:text-[#183D2B]"
-                          >
-                            ปรับเป็น Member
-                          </button>
-                        )}
                       </td>
                     </tr>
                   ))}
+                  {filteredRegisteredUsers.length === 0 && (
+                    <tr><td colSpan={6} className="p-8 text-center text-sm text-[#7A746B]">ไม่พบสมาชิกที่ตรงกับคำค้น</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
+          <p className="text-[11px] leading-relaxed text-[#7A746B]">
+            หมายเหตุ: การเปลี่ยนบทบาทจะบันทึกผ่าน Cloud Function และ Firebase Custom Claims จริง ไม่ได้เปลี่ยนเฉพาะหน้าจอ หากมีข้อผิดพลาด ระบบจะแสดงข้อความด้านบน
+          </p>
         </div>
       )}
 

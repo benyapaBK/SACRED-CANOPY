@@ -181,8 +181,8 @@ export const ContactPage: React.FC<{ currentUser: UserProfile }> = ({ currentUse
               <div className="flex items-start gap-3">
                 <Mail className="w-4 h-4 text-[#C6A96B] shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-semibold text-white block">อีเมลติดต่อฝ่ายบรรณาธิการ:</span>
-                  <span className="text-[#FAF7F0]/80">contact@sacredcanopy.org</span>
+                  <span className="font-semibold text-white block">อีเมลติดต่อฝ่ายผู้ดูแลหลัก:</span>
+                  <span className="text-[#FAF7F0]/80">66020277@go.buu.ac.th</span>
                 </div>
               </div>
 

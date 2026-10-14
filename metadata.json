@@ -1,0 +1,6 @@
+{
+  "name": "SACRED CANOPY — ร่มโพธิ์ ร่มไทร",
+  "description": "ร่มเงาแห่งสิริมงคล — ฐานข้อมูลไม้มงคลไทย ผสานพฤกษศาสตร์ การปลูกและดูแล วัฒนธรรมและความเชื่อไทย",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

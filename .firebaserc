@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "sacred-canopy-168ef"
+  },
+  "targets": {
+    "sacred-canopy-168ef": {
+      "hosting": {
+        "sacred-canopy-99": [
+          "sacred-canopy-99"
+        ]
+      }
+    }
+  }
+}

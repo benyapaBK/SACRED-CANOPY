@@ -120,7 +120,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               <TreePine className="w-4 h-4" />
               <span>สำรวจฐานข้อมูลไม้มงคล</span>
             </button>
-            {isMember && <button
+            {<button
               onClick={() => onNavigate('quiz')}
               className="px-6 py-3 rounded-xl bg-white/15 backdrop-blur-md border border-white/30 text-white hover:bg-white/25 transition-all flex items-center gap-2"
             >

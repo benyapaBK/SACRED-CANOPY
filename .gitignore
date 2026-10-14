@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Firebase Admin SDK secrets (never commit)
+*service-account*.json
+*-firebase-adminsdk-*.json
+firebase-adminsdk-*.json
+.firebase/

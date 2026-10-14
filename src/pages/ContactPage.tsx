@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { store } from '../services/store';
-import { ContactMessage } from '../types';
+import { ContactMessage, UserProfile } from '../types';
+import { db } from '../services/firebase';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { 
   ChevronRight, 
   Mail, 
@@ -15,7 +17,63 @@ import {
   ShieldCheck
 } from 'lucide-react';
 
-export const ContactPage: React.FC = () => {
+interface CreatorProfile {
+  name: string;
+  role: string;
+  email: string;
+  phone: string;
+  bio: string;
+  imageUrl: string;
+}
+const DEFAULT_CREATORS: CreatorProfile[] = [
+  { name: '', role: 'ผู้ดูแลเว็บไซต์', email: '', phone: '', bio: '', imageUrl: '' },
+  { name: '', role: 'ผู้ดูแลข้อมูล', email: '', phone: '', bio: '', imageUrl: '' },
+  { name: '', role: 'ผู้ดูแลข้อมูล', email: '', phone: '', bio: '', imageUrl: '' },
+];
+
+export const ContactPage: React.FC<{ currentUser: UserProfile }> = ({ currentUser }) => {
+  const [creators, setCreators] = useState<CreatorProfile[]>(DEFAULT_CREATORS);
+  const [editingCreators, setEditingCreators] = useState(false);
+  const [creatorSaveStatus, setCreatorSaveStatus] = useState('');
+  const [creatorLoading, setCreatorLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getDoc(doc(db, 'siteSettings', 'contactCreators')).then((snapshot) => {
+      if (!active || !snapshot.exists()) return;
+      const saved = snapshot.data().creators;
+      if (Array.isArray(saved)) setCreators(DEFAULT_CREATORS.map((fallback, i) => ({ ...fallback, ...(saved[i] || {}) })));
+    }).catch((error) => console.warn('Could not load contact creator profiles:', error));
+    return () => { active = false; };
+  }, []);
+
+  const updateCreator = (index: number, field: keyof CreatorProfile, value: string) => {
+    setCreators((previous) => previous.map((creator, i) => i === index ? { ...creator, [field]: value } : creator));
+  };
+
+  const handleCreatorImage = (index: number, file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setCreatorSaveStatus('กรุณาเลือกไฟล์ภาพเท่านั้น'); return; }
+    // No Firebase Storage is used. Small images may be embedded in Firestore; use image URLs for larger files.
+    if (file.size > 100 * 1024) { setCreatorSaveStatus('ไฟล์ภาพต้องไม่เกิน 100 KB เมื่อไม่ได้ใช้ Firebase Storage หรือใช้ URL ภาพแทน'); return; }
+    const reader = new FileReader();
+    reader.onload = () => updateCreator(index, 'imageUrl', String(reader.result || ''));
+    reader.readAsDataURL(file);
+  };
+
+  const saveCreators = async () => {
+    if (currentUser.role !== 'admin') return;
+    setCreatorLoading(true);
+    setCreatorSaveStatus('');
+    try {
+      await setDoc(doc(db, 'siteSettings', 'contactCreators'), { creators, updatedAt: serverTimestamp(), updatedBy: currentUser.uid });
+      setCreatorSaveStatus('บันทึกข้อมูลผู้สร้างเว็บไซต์แล้ว');
+      setEditingCreators(false);
+    } catch (error) {
+      console.error(error);
+      setCreatorSaveStatus('บันทึกไม่สำเร็จ ตรวจสอบว่าแอดมินมี Custom Claim และ deploy Firestore Rules แล้ว');
+    } finally { setCreatorLoading(false); }
+  };
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [category, setCategory] = useState<ContactMessage['category']>('สอบถามทั่วไป');
@@ -313,6 +371,66 @@ export const ContactPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Website creators / contact directory */}
+      <section className="mt-12 space-y-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-[#A48545] font-semibold">ทีมงาน SACRED CANOPY</p>
+            <h2 className="text-2xl font-display font-bold text-[#183D2B] mt-1">ผู้สร้างและผู้ดูแลเว็บไซต์</h2>
+            <p className="text-xs text-[#7A746B] mt-1">ข้อมูลทีมงานเรียงตามหน้าที่ และจัดการโดยผู้ดูแลเว็บไซต์</p>
+          </div>
+          {currentUser.role === 'admin' && (
+            <button onClick={() => setEditingCreators((value) => !value)} className="px-4 py-2 rounded-lg border border-[#C6A96B] text-[#183D2B] text-xs font-semibold hover:bg-white">
+              {editingCreators ? 'ปิดโหมดแก้ไข' : 'แก้ไขข้อมูลทีมงาน'}
+            </button>
+          )}
+        </div>
+
+        {editingCreators && currentUser.role === 'admin' && (
+          <div className="bg-white rounded-2xl border border-[#C6A96B]/40 p-5 space-y-5">
+            <p className="text-xs text-[#7A746B]">สามารถพิมพ์หน้าที่เองได้ เลือกไฟล์ภาพขนาดไม่เกิน 100 KB หรือใช้ URL ภาพภายนอก เนื่องจากโปรเจกต์นี้ไม่ใช้ Firebase Storage</p>
+            {creators.map((creator, index) => (
+              <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-3 border-b border-[#EEE7DA] pb-5 last:border-0">
+                <div className="md:col-span-2 text-sm font-bold text-[#183D2B]">ผู้ดูแลลำดับที่ {index + 1}</div>
+                {([
+                  ['name', 'ชื่อ-นามสกุล'], ['role', 'หน้าที่'], ['email', 'อีเมล'], ['phone', 'เบอร์โทรศัพท์'], ['bio', 'ข้อมูลแนะนำตัว'], ['imageUrl', 'URL รูปภาพ']
+                ] as [keyof CreatorProfile, string][]).map(([field, label]) => (
+                  <label key={field} className="text-xs text-[#49382C] space-y-1">
+                    <span className="block font-semibold">{label}</span>
+                    {field === 'bio' ? (
+                      <textarea value={creator[field]} onChange={(e) => updateCreator(index, field, e.target.value)} rows={2} className="w-full rounded-lg border border-[#EEE7DA] p-2" />
+                    ) : (
+                      <input value={creator[field]} onChange={(e) => updateCreator(index, field, e.target.value)} className="w-full rounded-lg border border-[#EEE7DA] p-2" />
+                    )}
+                  </label>
+                ))}
+                <label className="text-xs text-[#49382C] space-y-1">
+                  <span className="block font-semibold">หรือเลือกไฟล์ภาพ (สูงสุด 100 KB)</span>
+                  <input type="file" accept="image/*" onChange={(e) => handleCreatorImage(index, e.target.files?.[0])} className="w-full text-xs" />
+                </label>
+              </div>
+            ))}
+            <div className="flex justify-end">
+              <button disabled={creatorLoading} onClick={saveCreators} className="px-5 py-2.5 bg-[#183D2B] text-white rounded-lg text-xs font-bold disabled:opacity-50">{creatorLoading ? 'กำลังบันทึก...' : 'บันทึกข้อมูลทีมงาน'}</button>
+            </div>
+          </div>
+        )}
+
+        {creatorSaveStatus && <p role="status" className="text-xs text-[#A48545]">{creatorSaveStatus}</p>}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {creators.map((creator, index) => (
+            <article key={index} className="bg-white rounded-2xl border border-[#EEE7DA] p-5 shadow-sm">
+              {creator.imageUrl ? <img src={creator.imageUrl} alt={creator.name || creator.role} className="w-24 h-24 rounded-full object-cover mx-auto mb-4 border-2 border-[#C6A96B]" /> : <div className="w-24 h-24 rounded-full bg-[#F3EFE5] flex items-center justify-center mx-auto mb-4 text-3xl">🌱</div>}
+              <h3 className="text-center text-base font-bold text-[#183D2B]">{creator.name || `ผู้ดูแลลำดับที่ ${index + 1}`}</h3>
+              <p className="text-center text-xs font-semibold text-[#A48545] mt-1">{creator.role || 'ผู้ร่วมพัฒนาเว็บไซต์'}</p>
+              {creator.bio && <p className="text-xs text-[#7A746B] leading-relaxed mt-3">{creator.bio}</p>}
+              {creator.email && <p className="text-xs text-[#49382C] mt-3 break-words">อีเมล: <a className="underline" href={`mailto:${creator.email}`}>{creator.email}</a></p>}
+              {creator.phone && <p className="text-xs text-[#49382C] mt-1">โทร: {creator.phone}</p>}
+            </article>
+          ))}
+        </div>
+      </section>
     </div>
   );
 };

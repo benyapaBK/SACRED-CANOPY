@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Plant, FAQ, UserProfile } from '../types';
+import { NavigationPage } from './Header';
 import { Sparkles, MessageCircle, X, ChevronUp, RefreshCw } from 'lucide-react';
 
 const SPROUT_QUOTES = [
@@ -11,16 +13,55 @@ const SPROUT_QUOTES = [
   'พลูด่างและลิ้นมังกรช่วยฟอกอากาศในบ้านได้อย่างยอดเยี่ยมเลยครับ 🍃',
 ];
 
+interface ChatMessage { role: 'user' | 'sprout'; text: string; searchUrl?: string; }
 interface SproutMascotProps {
   onNavigateToQuiz?: () => void;
+  plants?: Plant[];
+  faqs?: FAQ[];
+  currentUser?: UserProfile;
+  onNavigate?: (page: NavigationPage) => void;
 }
 
-export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz }) => {
+export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, plants = [], faqs = [], currentUser, onNavigate }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [isBlinking, setIsBlinking] = useState(false);
   const [isWaving, setIsWaving] = useState(false);
   const [isPeeking, setIsPeeking] = useState(true);
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    { role: 'sprout', text: 'สวัสดีครับ 🌱 ผมต้นกล้า ผู้ช่วยตัวน้อยของ SACRED CANOPY ถามเรื่องต้นไม้ การดูแล หรือวิธีใช้เว็บไซต์ได้เลยนะครับ' }
+  ]);
+  const [isThinking, setIsThinking] = useState(false);
+
+  const answerQuestion = (question: string): ChatMessage => {
+    const q = question.toLowerCase().trim();
+    const faq = faqs.find((item) => q.includes(item.question.toLowerCase()) || item.question.toLowerCase().split(/\s+/).some((word) => word.length > 3 && q.includes(word)));
+    if (faq) return { role: 'sprout', text: faq.answer };
+    const plant = plants.find((item) => [item.thaiName, item.englishName, item.scientificName, item.plantId, ...(item.otherNames || [])].some((value) => value && q.includes(value.toLowerCase())));
+    if (plant) {
+      const answer = `${plant.thaiName} (${plant.scientificName}) รหัส ${plant.plantId}\n\n${plant.description}\n\nการดูแล: แสงแดด ${plant.care.sunlight}; น้ำ ${plant.care.water}; ดิน ${plant.care.soil}.\n\nข้อควรระวัง: ${plant.safety.caution || plant.safety.toxicityPets || 'โปรดตรวจสอบข้อมูลความปลอดภัยในรายละเอียดต้นไม้ด้วยนะครับ'}`;
+      return { role: 'sprout', text: answer };
+    }
+    if (/สมาชิก|สมัคร|เข้าสู่ระบบ|ล็อกอิน|login|register/.test(q)) return { role: 'sprout', text: 'สมัครสมาชิกหรือเข้าสู่ระบบได้จากปุ่มด้านบนครับ สมาชิกจะบันทึกต้นไม้โปรดและเล่นมินิเกมได้ ส่วนผู้เยี่ยมชมยังอ่านข้อมูลต้นไม้และใช้หน้าช่วยเหลือได้ครับ' };
+    if (/หัวใจ|รายการโปรด|favorite/.test(q)) return { role: 'sprout', text: 'กดหัวใจบนการ์ดต้นไม้เพื่อบันทึกไว้ในคลังส่วนตัวได้เมื่อเข้าสู่ระบบแล้วครับ หากยังไม่ได้เป็นสมาชิก ระบบจะแนะนำให้เข้าสู่ระบบก่อน' };
+    if (/เกม|quiz|แบบทดสอบ|เหมาะกับฉัน/.test(q)) return { role: 'sprout', text: currentUser?.role === 'guest' ? 'เกมค้นหาต้นไม้เหมาะกับคุณสำหรับสมาชิกครับ กดเมนูเกมแล้วเข้าสู่ระบบหรือสมัครสมาชิกเพื่อเริ่มเล่นได้เลย' : 'ไปที่เมนู “ค้นหาต้นไม้ Quiz” เพื่อทำแบบสอบถามและดูพรรณไม้ที่เหมาะกับพื้นที่และเวลาที่คุณมีได้เลยครับ' };
+    if (/ช่วยเหลือ|ติดต่อ|หน้าเว็บ|เว็บไซต์|ฐานข้อมูล|ค้นหา/.test(q)) return { role: 'sprout', text: 'คุณสามารถค้นหาต้นไม้จากชื่อไทย ชื่อวิทยาศาสตร์ หรือรหัสพรรณไม้ได้ครับ หน้า “ช่วยเหลือ” มีคำถามที่พบบ่อย และหน้า “ติดต่อเรา” ใช้ส่งข้อเสนอแนะให้ทีมงานได้ครับ' };
+    return { role: 'sprout', text: 'ตอนนี้ผมตอบได้จากข้อมูลต้นไม้และคำถามที่เตรียมไว้ในเว็บไซต์ครับ สำหรับข้อมูลล่าสุดจากอินเทอร์เน็ต คุณสามารถเปิดผลการค้นหาเว็บด้านล่าง แล้วนำข้อมูลกลับมาถามผมต่อได้ครับ', searchUrl: `https://www.google.com/search?q=${encodeURIComponent(question + ' ต้นไม้ พฤกษศาสตร์')}` };
+  };
+
+  const submitChat = (event: React.FormEvent) => {
+    event.preventDefault();
+    const question = chatInput.trim();
+    if (!question || isThinking) return;
+    setChatMessages((previous) => [...previous, { role: 'user', text: question }]);
+    setChatInput('');
+    setIsThinking(true);
+    window.setTimeout(() => {
+      setChatMessages((previous) => [...previous, answerQuestion(question)]);
+      setIsThinking(false);
+    }, 250);
+  };
 
   // Random eye blinking
   useEffect(() => {
@@ -63,11 +104,21 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz }) 
             </button>
           </div>
 
-          <p className="py-3 text-xs leading-relaxed text-[#49382C] font-body">
-            {SPROUT_QUOTES[quoteIndex]}
-          </p>
+          <div className="py-3 max-h-64 overflow-y-auto space-y-2 text-xs leading-relaxed text-[#49382C] font-body">
+            {chatMessages.map((message, index) => (
+              <div key={index} className={`rounded-xl p-2.5 whitespace-pre-line ${message.role === 'user' ? 'bg-[#183D2B] text-white ml-8' : 'bg-[#F3F5EC] text-[#49382C] mr-3'}`}>
+                {message.text}
+                {message.searchUrl && <a href={message.searchUrl} target="_blank" rel="noreferrer" className="block mt-2 font-semibold underline text-[#A48545]">ค้นหาข้อมูลบนเว็บ ↗</a>}
+              </div>
+            ))}
+            {isThinking && <p className="text-[#7A746B] italic">ต้นกล้ากำลังคิดคำตอบ…</p>}
+          </div>
+          <form onSubmit={submitChat} className="flex gap-2 border-t border-[#EEE7DA] pt-2">
+            <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="ถามต้นกล้าได้เลย..." className="min-w-0 flex-1 rounded-lg border border-[#EEE7DA] px-3 py-2 text-xs outline-none focus:border-[#C6A96B]" aria-label="ข้อความถามน้องต้นกล้า" />
+            <button type="submit" disabled={!chatInput.trim() || isThinking} className="rounded-lg bg-[#183D2B] px-3 py-2 text-xs font-bold text-white disabled:opacity-50">ส่ง</button>
+          </form>
 
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center justify-between pt-2">
             <button
               onClick={handleNextQuote}
               className="flex items-center gap-1 text-[11px] text-[#A48545] hover:text-[#183D2B] font-medium transition-colors"

@@ -12,6 +12,13 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+
+    // Public contact directory; only a trusted Firebase admin can edit creator profiles.
+    match /siteSettings/{settingId} {
+      allow read: if settingId == 'contactCreators' || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /users/{uid} {
       allow create: if isOwner(uid)
         && request.resource.data.uid == uid
@@ -21,11 +28,12 @@ service cloud.firestore {
       allow read: if isOwner(uid) || isAdmin();
       // Users may update their profile, favorites and login timestamp; role/status/email remain protected.
       allow update: if isOwner(uid)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'avatarUrl', 'favorites', 'lastLoginAt', 'updatedAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'avatarUrl', 'favorites', 'recentlyViewed', 'lastLoginAt', 'updatedAt'])
         && request.resource.data.role == resource.data.role
         && request.resource.data.status == resource.data.status
         && request.resource.data.email == resource.data.email
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['favorites']) || request.resource.data.favorites is list);
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['favorites']) || request.resource.data.favorites is list)
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['recentlyViewed']) || (request.resource.data.recentlyViewed is list && request.resource.data.recentlyViewed.size() <= 30));
       allow delete: if isAdmin();
     }
 

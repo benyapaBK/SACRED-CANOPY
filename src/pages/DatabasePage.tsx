@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Plant, Category } from '../types';
+import { store } from '../services/store';
 import { PlantCard } from '../components/PlantCard';
 import { BELIEFS_DATA } from '../data/beliefs';
 import { 
@@ -28,6 +29,7 @@ interface DatabasePageProps {
   initialSearchQuery?: string;
   initialCategory?: string;
   initialBelief?: string;
+  canExport?: boolean;
 }
 
 export const DatabasePage: React.FC<DatabasePageProps> = ({
@@ -39,6 +41,7 @@ export const DatabasePage: React.FC<DatabasePageProps> = ({
   initialSearchQuery = '',
   initialCategory = '',
   initialBelief = '',
+  canExport = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
@@ -52,6 +55,18 @@ export const DatabasePage: React.FC<DatabasePageProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(12);
+
+  const handleExport = () => {
+    if (!canExport) return;
+    const csv = store.exportPlantsCSV();
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'sacred-canopy-plants.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Filter & Search Logic
   const filteredPlants = useMemo(() => {
@@ -177,8 +192,9 @@ export const DatabasePage: React.FC<DatabasePageProps> = ({
               สำรวจ ค้นหา และเปรียบเทียบข้อมูลพฤกษศาสตร์ คติความเชื่อ และการดูแลรักษา
             </p>
           </div>
-          <div className="text-xs text-[#7A746B]">
-            แสดง <span className="font-bold text-[#183D2B]">{sortedPlants.length}</span> จากทั้งหมด {plants.length} พรรณไม้
+          <div className="flex flex-wrap items-center gap-3 text-xs text-[#7A746B]">
+            <span>แสดง <span className="font-bold text-[#183D2B]">{sortedPlants.length}</span> จากทั้งหมด {plants.length} พรรณไม้</span>
+            {canExport && <button onClick={handleExport} className="px-3 py-2 rounded-lg border border-[#C6A96B]/60 text-[#183D2B] font-semibold hover:bg-white">ส่งออก CSV</button>}
           </div>
         </div>
       </div>

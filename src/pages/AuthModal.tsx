@@ -288,7 +288,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               setErrorMessage('');
               if (adminCode === 'admin123456') {
                 setAdminGatePassed(true);
-                setMessage('ผ่านขั้นตอนเข้าโหมดแอดมินแล้ว กรุณาเข้าสู่ระบบด้วยบัญชี Firebase ที่มีสิทธิ์แอดมิน');
+                setEmail('admin@gmail.com');
+                setMessage('กรุณาเข้าสู่ระบบด้วยบัญชี Firebase admin@gmail.com ที่ได้รับ Custom Claim admin แล้ว');
               } else {
                 setErrorMessage('รหัสเข้าโหมดแอดมินไม่ถูกต้อง');
               }

@@ -15,6 +15,7 @@ import { CategoriesPage } from './pages/CategoriesPage';
 import { BeliefsPage } from './pages/BeliefsPage';
 import { QuizPage } from './pages/QuizPage';
 import { FavoritesPage } from './pages/FavoritesPage';
+import { HistoryPage } from './pages/HistoryPage';
 import { ArticlesPage } from './pages/ArticlesPage';
 import { HelpPage } from './pages/HelpPage';
 import { AboutPage } from './pages/AboutPage';
@@ -72,8 +73,8 @@ export default function App() {
   }, []);
 
   const handleNavigate = (page: NavigationPage) => {
-    if (currentUser.role === 'guest' && page !== 'home' && page !== 'admin') {
-      setCurrentPage('home');
+    // Public pages are available to everyone. Quiz and favorites require a Firebase account.
+    if (currentUser.role === 'guest' && (page === 'quiz' || page === 'favorites')) {
       setAuthModalOpen(true);
       return;
     }
@@ -90,20 +91,22 @@ export default function App() {
     store.toggleFavorite(plantId);
   };
 
+  const handleSelectPlant = (plant: Plant) => {
+    setSelectedPlant(plant);
+    store.recordPlantView(plant.plantId);
+  };
+
   const handleSearchFromHome = (query: string) => {
-    if (currentUser.role === 'guest') { setAuthModalOpen(true); return; }
     setSearchQuery(query);
     setCurrentPage('database');
   };
 
   const handleCategoryFromHome = (categoryId: string) => {
-    if (currentUser.role === 'guest') { setAuthModalOpen(true); return; }
     setSelectedCategoryId(categoryId);
     setCurrentPage('categories');
   };
 
   const handleBeliefFromHome = (beliefId: string) => {
-    if (currentUser.role === 'guest') { setAuthModalOpen(true); return; }
     setSelectedBeliefId(beliefId);
     setCurrentPage('beliefs');
   };
@@ -134,7 +137,7 @@ export default function App() {
             articles={articles}
             favorites={currentUser.favorites || []}
             onToggleFavorite={handleToggleFavorite}
-            onSelectPlant={(plant) => setSelectedPlant(plant)}
+            onSelectPlant={handleSelectPlant}
             onSearchQuery={handleSearchFromHome}
             onSelectCategory={handleCategoryFromHome}
             onSelectBelief={handleBeliefFromHome}
@@ -148,10 +151,11 @@ export default function App() {
             categories={categories}
             favorites={currentUser.favorites || []}
             onToggleFavorite={handleToggleFavorite}
-            onSelectPlant={(plant) => setSelectedPlant(plant)}
+            onSelectPlant={handleSelectPlant}
             initialSearchQuery={searchQuery}
             initialCategory={selectedCategoryId}
             initialBelief={selectedBeliefId}
+            canExport={currentUser.role !== 'guest'}
           />
         )}
 
@@ -161,7 +165,7 @@ export default function App() {
             plants={plants}
             favorites={currentUser.favorites || []}
             onToggleFavorite={handleToggleFavorite}
-            onSelectPlant={(plant) => setSelectedPlant(plant)}
+            onSelectPlant={handleSelectPlant}
             initialCategoryId={selectedCategoryId}
           />
         )}
@@ -171,7 +175,7 @@ export default function App() {
             plants={plants}
             favorites={currentUser.favorites || []}
             onToggleFavorite={handleToggleFavorite}
-            onSelectPlant={(plant) => setSelectedPlant(plant)}
+            onSelectPlant={handleSelectPlant}
             initialBeliefId={selectedBeliefId}
           />
         )}
@@ -181,7 +185,17 @@ export default function App() {
             plants={plants}
             favorites={currentUser.favorites || []}
             onToggleFavorite={handleToggleFavorite}
-            onSelectPlant={(plant) => setSelectedPlant(plant)}
+            onSelectPlant={handleSelectPlant}
+          />
+        )}
+
+        {currentPage === 'history' && (
+          <HistoryPage
+            plants={plants}
+            currentUser={currentUser}
+            onToggleFavorite={handleToggleFavorite}
+            onSelectPlant={handleSelectPlant}
+            onOpenAuthModal={() => setAuthModalOpen(true)}
           />
         )}
 
@@ -191,7 +205,7 @@ export default function App() {
             favorites={currentUser.favorites || []}
             currentUser={currentUser}
             onToggleFavorite={handleToggleFavorite}
-            onSelectPlant={(plant) => setSelectedPlant(plant)}
+            onSelectPlant={handleSelectPlant}
             onNavigateToDatabase={() => handleNavigate('database')}
             onOpenAuthModal={() => setAuthModalOpen(true)}
           />
@@ -210,7 +224,7 @@ export default function App() {
         )}
 
         {currentPage === 'contact' && (
-          <ContactPage />
+          <ContactPage currentUser={currentUser} />
         )}
 
         {currentPage === 'admin' && (
@@ -222,14 +236,14 @@ export default function App() {
             contactMessages={contactMessages}
             auditLogs={auditLogs}
             currentUser={currentUser}
-            onSelectPlant={(plant) => setSelectedPlant(plant)}
+            onSelectPlant={handleSelectPlant}
             onOpenAuthModal={() => setAuthModalOpen(true)}
           />
         )}
       </main>
 
       {/* Interactive Mascot "น้องต้นกล้า" */}
-      <SproutMascot onNavigateToQuiz={() => handleNavigate('quiz')} />
+      <SproutMascot onNavigateToQuiz={() => handleNavigate('quiz')} plants={plants} faqs={faqs} currentUser={currentUser} onNavigate={handleNavigate} />
 
       {/* Deep Botanical Detail Modal */}
       <PlantDetailModal
@@ -237,9 +251,9 @@ export default function App() {
         onClose={() => setSelectedPlant(null)}
         isFavorite={selectedPlant ? (currentUser.favorites || []).includes(selectedPlant.plantId) : false}
         onToggleFavorite={handleToggleFavorite}
-        onSelectPlant={(plant) => setSelectedPlant(plant)}
+        onSelectPlant={handleSelectPlant}
         allPlants={plants}
-        canFavorite={currentUser.role !== 'guest'}
+        canFavorite={true}
       />
 
       {/* Auth Modal */}

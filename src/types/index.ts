@@ -181,6 +181,7 @@ export interface UserProfile {
   email: string;
   role: 'guest' | 'member' | 'admin';
   favorites: string[]; // array of plantId
+  recentlyViewed?: string[]; // plantId values, newest first
   avatarUrl?: string;
   authProvider?: 'google' | 'email';
   status?: 'active' | 'suspended';

@@ -20,6 +20,7 @@ export type NavigationPage =
   | 'beliefs' 
   | 'quiz' 
   | 'favorites' 
+  | 'history' 
   | 'articles' 
   | 'help' 
   | 'about' 
@@ -52,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'categories' as NavigationPage, label: 'หมวดหมู่ 8 พรรณ' },
     { id: 'beliefs' as NavigationPage, label: 'คติความเชื่อ' },
     { id: 'quiz' as NavigationPage, label: 'ค้นหาต้นไม้ Quiz' },
+    { id: 'history' as NavigationPage, label: 'ประวัติที่เข้าชม' },
     { id: 'articles' as NavigationPage, label: 'เกร็ดความรู้' },
     { id: 'help' as NavigationPage, label: 'ช่วยเหลือ Q&A' },
   ];
@@ -88,7 +90,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Zone 2: Navigation Links */}
         <nav className="hidden lg:flex items-center gap-6 text-sm font-medium">
-          {currentUser.role !== 'guest' && navLinks.map((item) => {
+          {navLinks.filter((item) => item.id !== 'history' || currentUser.role !== 'guest').map((item) => {
             const isActive = currentPage === item.id;
             return (
               <button
@@ -111,8 +113,8 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Zone 3: Primary Action & Utilities */}
         <div className="flex items-center gap-3 shrink-0">
-          {/* Favorites Button: members only */}
-          {currentUser.role !== 'guest' && <button
+          {/* Favorites entry is visible to everyone; guests are prompted to sign in */}
+          <button
             onClick={() => onNavigate('favorites')}
             className={`relative p-2 rounded-lg transition-colors ${
               currentPage === 'favorites'
@@ -127,10 +129,10 @@ export const Header: React.FC<HeaderProps> = ({
                 {favoritesCount}
               </span>
             )}
-          </button>}
+          </button>
 
           {/* Contact Us Direct Link */}
-          {currentUser.role !== 'guest' && <button
+          <button
             onClick={() => onNavigate('contact')}
             className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[#C6A96B]/40 hover:border-[#C6A96B] transition-colors ${
               currentPage === 'contact' ? 'bg-[#C6A96B] text-[#0F271B]' : 'text-[#FAF7F0]'
@@ -138,7 +140,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Mail className="w-3.5 h-3.5" />
             <span>ติดต่อเรา</span>
-          </button>}
+          </button>
 
           {/* Admin Dashboard Direct Entry (Visible only when user is logged in as Admin) */}
           {currentUser.role === 'admin' && (
@@ -273,7 +275,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden bg-[#0F271B] border-t border-[#C6A96B]/20 px-4 py-4 space-y-2 animate-in fade-in">
-          {currentUser.role !== 'guest' && navLinks.map((item) => (
+          {navLinks.filter((item) => item.id !== 'history' || currentUser.role !== 'guest').map((item) => (
             <button
               key={item.id}
               onClick={() => {

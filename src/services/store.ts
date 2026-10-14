@@ -78,6 +78,7 @@ class StoreService {
         email: firebaseUser.email || '',
         role: isAdmin ? 'admin' : 'member',
         favorites: Array.isArray(existing.favorites) ? existing.favorites : [],
+        recentlyViewed: Array.isArray(existing.recentlyViewed) ? existing.recentlyViewed : [],
         avatarUrl: firebaseUser.photoURL || existing.avatarUrl || undefined,
         authProvider: firebaseUser.providerData.some(p => p.providerId === 'google.com') ? 'google' : 'email',
         status: existing.status === 'suspended' ? 'suspended' : 'active',
@@ -325,7 +326,7 @@ class StoreService {
       const claims = await credential.user.getIdTokenResult(true);
       const data = snapshot.exists() ? snapshot.data() : {};
       if (data.status === 'suspended') { await signOut(auth); return { success: false, error: 'บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ' }; }
-      const profile: UserProfile = { uid: credential.user.uid, displayName: credential.user.displayName || data.displayName || email.split('@')[0], email: credential.user.email || email, role: claims.claims.admin === true ? 'admin' : 'member', favorites: Array.isArray(data.favorites) ? data.favorites : [], avatarUrl: credential.user.photoURL || data.avatarUrl, authProvider: 'email', status: 'active', createdAt: data.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(), lastLoginAt: new Date().toISOString() };
+      const profile: UserProfile = { uid: credential.user.uid, displayName: credential.user.displayName || data.displayName || email.split('@')[0], email: credential.user.email || email, role: claims.claims.admin === true ? 'admin' : 'member', favorites: Array.isArray(data.favorites) ? data.favorites : [], recentlyViewed: Array.isArray(data.recentlyViewed) ? data.recentlyViewed : [], avatarUrl: credential.user.photoURL || data.avatarUrl, authProvider: 'email', status: 'active', createdAt: data.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(), lastLoginAt: new Date().toISOString() };
       this.currentUser = profile;
       if (!snapshot.exists()) await setDoc(doc(db, 'users', credential.user.uid), { ...profile, role: 'member', createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
       if (profile.role === 'admin') await this.refreshRegisteredUsers();
@@ -346,7 +347,7 @@ class StoreService {
       const profile: UserProfile = {
         uid: firebaseUser.uid, displayName: firebaseUser.displayName || 'สมาชิก', email: firebaseUser.email || '',
         role: token.claims.admin === true ? 'admin' : 'member',
-        favorites: Array.isArray(data.favorites) ? data.favorites : [], avatarUrl: firebaseUser.photoURL || undefined,
+        favorites: Array.isArray(data.favorites) ? data.favorites : [], recentlyViewed: Array.isArray(data.recentlyViewed) ? data.recentlyViewed : [], avatarUrl: firebaseUser.photoURL || undefined,
         authProvider: 'google', status: data.status === 'suspended' ? 'suspended' : 'active',
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(), lastLoginAt: new Date().toISOString(),
       };
@@ -411,6 +412,15 @@ class StoreService {
       await this.refreshRegisteredUsers();
       this.logAction('DELETE_USER', 'user', uid, 'ลบโปรไฟล์สมาชิก');
     } catch (error) { console.error('ลบสมาชิกไม่สำเร็จ ต้อง deploy Cloud Functions และใช้บัญชี admin ที่มี Custom Claim', error); throw error; }
+  }
+
+  public recordPlantView(plantId: string): void {
+    if (this.currentUser.role === 'guest') return;
+    const recentlyViewed = [plantId, ...(this.currentUser.recentlyViewed || []).filter((id) => id !== plantId)].slice(0, 30);
+    this.currentUser = { ...this.currentUser, recentlyViewed };
+    void updateDoc(doc(db, 'users', this.currentUser.uid), { recentlyViewed, updatedAt: serverTimestamp() })
+      .catch((error) => console.warn('Could not sync recent views to Firestore', error));
+    this.notify();
   }
 
   // --- Favorites ---
@@ -1031,6 +1041,14 @@ class StoreService {
   }
 
   public exportPlantsCSV(): string {
+    // Preserve every imported CSV field when sourceData is available.
+    const sourceRows = this.plants.filter((plant) => plant.sourceData && Object.keys(plant.sourceData).length > 0);
+    if (sourceRows.length > 0) {
+      const headers = Array.from(new Set(sourceRows.flatMap((plant) => Object.keys(plant.sourceData || {}))));
+      const quote = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+      const rows = sourceRows.map((plant) => headers.map((header) => quote(plant.sourceData?.[header] ?? '')));
+      return '\uFEFF' + [headers.map(quote).join(','), ...rows.map((row) => row.join(','))].join('\r\n');
+    }
     const headers = [
       'รหัสพรรณไม้',
       'ชื่อไทย',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plant, FAQ, UserProfile } from '../types';
 import { NavigationPage } from './Header';
-import { Sparkles, MessageCircle, X, ChevronUp, RefreshCw, Minus, Plus, ExternalLink, Compass } from 'lucide-react';
+import { Sparkles, X, RefreshCw, ExternalLink, Compass } from 'lucide-react';
 
 const SPROUT_QUOTES = [
   'สวัสดีครับ! ผมชื่อ "น้องต้นกล้า" ยินดีต้อนรับสู่ ร่มโพธิ์ ร่มไทร ครับ 🌱',
@@ -33,7 +33,6 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
     { role: 'sprout', text: 'สวัสดีครับ 🌱 ผมต้นกล้า ผู้ช่วยตัวน้อยของ SACRED CANOPY ถามเรื่องต้นไม้ การดูแล หรือวิธีใช้เว็บไซต์ได้เลยนะครับ' }
   ]);
   const [isThinking, setIsThinking] = useState(false);
-  const [chatSize, setChatSize] = useState<'compact' | 'normal' | 'wide'>('normal');
   const [mascotAction, setMascotAction] = useState('01_tonkla_wave.png');
   const [showKnowledge, setShowKnowledge] = useState(false);
 
@@ -92,25 +91,26 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
   };
 
   const handleMascotClick = () => {
-    setIsOpen(!isOpen);
-    setMascotAction(isOpen ? '12_tonkla_wink.png' : '02_tonkla_happy_jump.png');
+    const nextOpen = !isOpen;
+    setIsOpen(nextOpen);
+    setMascotAction(nextOpen ? '02_tonkla_happy_jump.png' : '01_tonkla_wave.png');
     setIsWaving(true);
     setTimeout(() => setIsWaving(false), 600);
   };
 
   return (
-    <aside aria-label="ผู้ช่วยนำทาง น้องต้นกล้า" className="fixed z-40 select-none bottom-3 right-3 sm:bottom-5 sm:right-5 flex flex-col items-end">
+    <aside aria-label="ผู้ช่วยนำทาง น้องต้นกล้า" className="fixed z-40 select-none bottom-12 right-3 sm:bottom-12 sm:right-5 flex flex-col items-end">
       {/* Speech Bubble Dialog */}
       {isOpen && (
-        <div style={{ resize: 'both', width: chatSize === 'compact' ? 300 : chatSize === 'wide' ? 'min(88vw, 620px)' : 360, height: 'min(62vh, 560px)', minWidth: 280, minHeight: 300, maxWidth: 'min(94vw, 720px)', maxHeight: '78vh' }} className="mb-3 flex flex-col overflow-auto rounded-2xl bg-white/95 backdrop-blur-md p-3 sm:p-4 shadow-[0_14px_42px_rgba(15,39,27,0.18)] border border-[#C6A96B]/35 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="flex items-center justify-between mb-2 rounded-xl bg-[#F3F5EC] p-2"><img src={`/mascot/${mascotAction}`} alt="น้องต้นกล้า" className="h-14 w-14 object-contain"/><div className="text-[11px] text-[#183D2B] flex-1 ml-2"><strong>ต้นกล้าพร้อมช่วยครับ</strong><p>ถามเรื่องต้นไม้หรือให้ช่วยพาไปยังหน้าเว็บได้เลย</p></div><div className="flex gap-1"><button onClick={() => setChatSize('compact')} title="ย่อหน้าต่าง" className="p-1 rounded hover:bg-white"><Minus className="w-3 h-3"/></button><button onClick={() => setChatSize(chatSize === 'wide' ? 'normal' : 'wide')} title="ขยายหน้าต่าง" className="p-1 rounded hover:bg-white"><Plus className="w-3 h-3"/></button></div></div>
+        <div style={{ resize: 'both', width: 'min(380px, calc(100vw - 24px))', height: 'min(520px, 65vh)', minWidth: 280, minHeight: 300, maxWidth: 'calc(100vw - 24px)', maxHeight: '82vh', overflow: 'hidden' }} className="mb-3 flex flex-col overflow-hidden rounded-2xl bg-white/95 backdrop-blur-md p-3 sm:p-4 shadow-[0_14px_42px_rgba(15,39,27,0.18)] border border-[#C6A96B]/35 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex shrink-0 items-center gap-2 mb-2 rounded-xl bg-[#F3F5EC] p-2"><img src={`/mascot/${isThinking ? '05_tonkla_chat_typing.png' : mascotAction}`} alt="น้องต้นกล้า" className="h-14 w-14 object-contain"/><div className="text-[11px] text-[#183D2B] flex-1"><strong>{isThinking ? 'ต้นกล้ากำลังคิดครับ…' : 'ต้นกล้าพร้อมช่วยครับ'}</strong><p>{isThinking ? 'รอสักครู่นะครับ 🌱' : 'ถามเรื่องต้นไม้หรือให้ช่วยพาไปยังหน้าเว็บได้เลย'}</p></div></div>
           <div className="flex items-center justify-between pb-2 border-b border-[#EEE7DA]">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-[#183D2B]">
               <Sparkles className="w-3.5 h-3.5 text-[#C6A96B]" />
               <span>น้องต้นกล้า ชวนรู้ไม้มงคล</span>
             </div>
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={() => { setIsOpen(false); setMascotAction('01_tonkla_wave.png'); }}
               className="text-[#B8BCC2] hover:text-[#183D2B] transition-colors p-0.5 rounded-full"
               title="ปิดข้อความ"
             >
@@ -175,7 +175,7 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
           }`}
           aria-label="คลิกเพื่อสนทนากับน้องต้นกล้า ผู้ช่วยนำทางไม้มงคล"
         >
-          <img src={`/mascot/${mascotAction}`} alt="น้องต้นกล้า มาสคอตผู้ช่วย SACRED CANOPY" className="h-32 w-32 sm:h-40 sm:w-40 object-contain drop-shadow-[0_8px_12px_rgba(15,39,27,0.24)]" />
+          <img src={`/mascot/${isThinking ? '05_tonkla_chat_typing.png' : isOpen ? mascotAction : '01_tonkla_wave.png'}`} alt="น้องต้นกล้า มาสคอตผู้ช่วย SACRED CANOPY" className="h-36 w-36 sm:h-44 sm:w-44 object-contain drop-shadow-[0_8px_12px_rgba(15,39,27,0.24)]" style={{ transform: 'scaleX(-1)' }} />
 
           {/* Golden Badge Notification Ring */}
           <span className="absolute -top-1 -right-1 flex h-4 w-4">

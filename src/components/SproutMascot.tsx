@@ -1,6 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import React, { useState, useEffect } from 'react';
 import { Plant, FAQ, UserProfile } from '../types';
 import { NavigationPage } from './Header';
 import { Sparkles, X, RefreshCw, ExternalLink, Compass } from 'lucide-react';
@@ -37,76 +35,6 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
   const [isThinking, setIsThinking] = useState(false);
   const [mascotAction, setMascotAction] = useState('01_tonkla_wave.png');
   const [showKnowledge, setShowKnowledge] = useState(false);
-  // Admin-controlled shared mascot position (normalized to the viewport).
-  const [sharedMascotPosition, setSharedMascotPosition] = useState<{ x: number; y: number } | null>(null);
-  const [isDraggingMascot, setIsDraggingMascot] = useState(false);
-  const mascotDragRef = useRef<{ pointerId: number; offsetX: number; offsetY: number; moved: boolean } | null>(null);
-  const suppressMascotClickRef = useRef(false);
-  const isAdmin = currentUser?.role === 'admin';
-
-  useEffect(() => {
-    // Position is public to read so every visitor sees the same placement.
-    const positionRef = doc(db, 'siteSettings', 'mascotPosition');
-    return onSnapshot(positionRef, (snapshot) => {
-      const data = snapshot.data();
-      if (snapshot.exists() && typeof data?.x === 'number' && typeof data?.y === 'number') {
-        setSharedMascotPosition({
-          x: Math.max(0.05, Math.min(0.95, data.x)),
-          y: Math.max(0.08, Math.min(0.92, data.y)),
-        });
-      } else {
-        setSharedMascotPosition(null);
-      }
-    }, (error) => {
-      console.warn('Unable to sync mascot position:', error);
-    });
-  }, []);
-
-  const handleMascotPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (!isAdmin || event.button !== 0) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const anchorX = sharedMascotPosition ? sharedMascotPosition.x * window.innerWidth : rect.right;
-    const anchorY = sharedMascotPosition ? sharedMascotPosition.y * window.innerHeight : rect.bottom;
-    mascotDragRef.current = {
-      pointerId: event.pointerId,
-      offsetX: anchorX - event.clientX,
-      offsetY: anchorY - event.clientY,
-      moved: false,
-    };
-    setIsDraggingMascot(true);   
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-
-  const handleMascotPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const drag = mascotDragRef.current;
-    if (!isAdmin || !drag || drag.pointerId !== event.pointerId) return;
-    const x = Math.max(0.05, Math.min(0.95, (event.clientX + drag.offsetX) / window.innerWidth));
-    const y = Math.max(0.08, Math.min(0.92, (event.clientY + drag.offsetY) / window.innerHeight));
-    if (Math.abs(event.movementX) + Math.abs(event.movementY) > 1) {
-      drag.moved = true;
-      suppressMascotClickRef.current = true;
-    }
-    setSharedMascotPosition({ x, y });
-  };
-
-  const handleMascotPointerUp = async (event: React.PointerEvent<HTMLButtonElement>) => {
-    const drag = mascotDragRef.current;
-    if (!isAdmin || !drag || drag.pointerId !== event.pointerId) return;
-    mascotDragRef.current = null;
-    setIsDraggingMascot(false);
-    if (drag.moved && sharedMascotPosition) {
-      try {
-        await setDoc(doc(db, 'siteSettings', 'mascotPosition'), {
-          ...sharedMascotPosition,
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
-      } catch (error) {
-        console.error('Unable to save mascot position:', error);
-      }
-      // Prevent the drag release from opening/closing the chat.
-      window.setTimeout(() => { suppressMascotClickRef.current = false; }, 0);
-    }
-  };
 
   const answerQuestion = (question: string): ChatMessage => {
     const q = question.toLowerCase().trim();
@@ -171,17 +99,7 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
   };
 
   return (
-    <aside
-      aria-label="ผู้ช่วยนำทาง น้องต้นกล้า"
-      style={sharedMascotPosition ? {
-        left: `${sharedMascotPosition.x * 100}vw`,
-        top: `${sharedMascotPosition.y * 100}vh`,
-        right: 'auto',
-        bottom: 'auto',
-        transform: 'translate(-100%, -100%)',
-      } : undefined}
-      className={`fixed z-50 select-none ${sharedMascotPosition ? '' : 'bottom-[42px] right-[clamp(20px,3vw,34px)]'} flex flex-col items-end max-w-[calc(100vw-48px)]`}
-    >
+    <aside aria-label="ผู้ช่วยนำทาง น้องต้นกล้า" className="fixed z-50 select-none bottom-[42px] right-[clamp(20px,3vw,34px)] flex flex-col items-end max-w-[calc(100vw-48px)]">
       {/* Speech Bubble Dialog */}
       {isOpen && (
         <div style={{ resize: 'both', width: 'min(420px, calc(100vw - 24px))', height: 'min(560px, 68vh)', minWidth: 'min(280px, calc(100vw - 24px))', minHeight: 'min(300px, 45vh)', maxWidth: 'calc(100vw - 16px)', maxHeight: 'calc(100vh - 260px)', overflow: 'auto', }} className="mb-2 flex flex-col overflow-auto rounded-2xl bg-white/95 backdrop-blur-md p-3 sm:p-4 shadow-[0_14px_42px_rgba(15,39,27,0.18)] border border-[#C6A96B]/45 outline outline-1 outline-[#C6A96B]/10 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -251,24 +169,10 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
         )}
 
         <button
-          onClick={() => {
-            if (suppressMascotClickRef.current) return;
-            handleMascotClick();
-          }}
-          onPointerDown={handleMascotPointerDown}
-          onPointerMove={handleMascotPointerMove}
-          onPointerUp={handleMascotPointerUp}
-          onPointerCancel={handleMascotPointerUp}
-          onLostPointerCapture={() => {
-            if (mascotDragRef.current) {
-              mascotDragRef.current = null;
-              setIsDraggingMascot(false);
-            }
-          }}
-          className={`relative block border-0 bg-transparent p-0 shadow-none ${isAdmin ? 'cursor-grab active:cursor-grabbing' : ''} ${isDraggingMascot ? 'cursor-grabbing' : ''} ${
-            isWaving && !isDraggingMascot ? 'animate-bounce' : ''
+          onClick={handleMascotClick}
+          className={`relative block border-0 bg-transparent p-0 shadow-none hover:scale-105 active:scale-95 transition-transform duration-300 ${
+            isWaving ? 'animate-bounce' : ''
           }`}
-          style={{ touchAction: isAdmin ? 'none' : 'auto' }}
           aria-label="คลิกเพื่อสนทนากับน้องต้นกล้า ผู้ช่วยนำทางไม้มงคล"
         >
           {(() => {
@@ -297,13 +201,6 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
             );
           })()}
 
-          {/* Golden Badge Notification Ring */}
-          <span className="absolute -top-1 -right-1 flex h-4 w-4">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C6A96B] opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-4 w-4 bg-[#C6A96B] text-[9px] font-bold text-white items-center justify-center">
-              !
-            </span>
-          </span>
         </button>
 
       </div>

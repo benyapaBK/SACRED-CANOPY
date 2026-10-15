@@ -671,7 +671,7 @@ class StoreService {
     const art = this.articles.find((a) => a.articleId === articleId);
     this.articles = this.articles.filter((a) => a.articleId !== articleId);
     localStorage.setItem(STORAGE_KEYS.ARTICLES, JSON.stringify(this.articles));
-    void this.persistCollection('articles', this.articles, (row) => row.articleId);
+    void deleteDoc(doc(db, 'articles', articleId)).catch((error) => console.warn('Could not delete article from Firestore', error));
     this.logAction('DELETE_ARTICLE', 'article', articleId, `ลบบทความ: ${art?.title || articleId}`);
     this.notify();
   }
@@ -704,7 +704,7 @@ class StoreService {
   public deleteFaq(faqId: string) {
     this.faqs = this.faqs.filter((f) => f.faqId !== faqId);
     localStorage.setItem(STORAGE_KEYS.FAQS, JSON.stringify(this.faqs));
-    void this.persistCollection('faqs', this.faqs, (row) => row.faqId);
+    void deleteDoc(doc(db, 'faqs', faqId)).catch((error) => console.warn('Could not delete FAQ from Firestore', error));
     this.logAction('DELETE_FAQ', 'faq', faqId, `ลบคำถาม FAQ: ${faqId}`);
     this.notify();
   }
@@ -723,9 +723,22 @@ class StoreService {
     };
     this.contactMessages = [newMsg, ...this.contactMessages];
     localStorage.setItem(STORAGE_KEYS.CONTACT_MESSAGES, JSON.stringify(this.contactMessages));
-    void addDoc(collection(db, 'contactMessages'), { ...newMsg, createdAt: serverTimestamp() }).catch((error) => console.warn('Contact message could not be saved to Firestore', error));
+    void setDoc(doc(db, 'contactMessages', newMsg.messageId), { ...newMsg, createdAt: serverTimestamp() }).catch((error) => console.warn('Contact message could not be saved to Firestore', error));
     this.notify();
     return newMsg;
+  }
+
+
+  public async deleteContactMessage(id: string) {
+    this.contactMessages = this.contactMessages.filter((message) => message.messageId !== id);
+    localStorage.setItem(STORAGE_KEYS.CONTACT_MESSAGES, JSON.stringify(this.contactMessages));
+    try {
+      await deleteDoc(doc(db, 'contactMessages', id));
+      const matching = await getDocs(query(collection(db, 'contactMessages'), where('messageId', '==', id)));
+      await Promise.all(matching.docs.map((snapshot) => deleteDoc(snapshot.ref)));
+    } catch (error) { console.warn('Could not delete Firestore contact message', error); }
+    this.logAction('DELETE_CONTACT_MESSAGE', 'system', id, `ลบข้อความติดต่อ: ${id}`);
+    this.notify();
   }
 
   public updateMessageStatus(id: string, status: ContactMessage['status']) {

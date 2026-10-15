@@ -15,7 +15,7 @@ service cloud.firestore {
 
     // Public contact directory; only a trusted Firebase admin can edit creator profiles.
     match /siteSettings/{settingId} {
-      allow read: if settingId == 'contactCreators' || isAdmin();
+      allow read: if settingId in ['contactCreators', 'maintenanceNotice'] || isAdmin();
       allow create, update, delete: if isAdmin();
     }
 
@@ -30,12 +30,12 @@ service cloud.firestore {
       // Role/status/email/uid remain protected from client-side edits.
       allow update: if isOwner(uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'displayName', 'avatarUrl', 'favorites', 'recentlyViewed',
+          'displayName', 'avatarUrl', 'email', 'favorites', 'recentlyViewed',
           'lastLoginAt', 'updatedAt', 'quizHistory'
         ])
         && request.resource.data.role == resource.data.role
         && request.resource.data.status == resource.data.status
-        && request.resource.data.email == resource.data.email
+        && (request.resource.data.email == resource.data.email || request.resource.data.email == request.auth.token.email)
         && request.resource.data.uid == resource.data.uid
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['favorites']) || request.resource.data.favorites is list)
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['recentlyViewed']) || (request.resource.data.recentlyViewed is list && request.resource.data.recentlyViewed.size() <= 30))

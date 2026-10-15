@@ -179,6 +179,12 @@ export const ArticlesPage: React.FC<ArticlesPageProps> = ({ articles }) => {
               <div className="prose prose-stone max-w-none text-xs sm:text-sm text-[#49382C] leading-relaxed whitespace-pre-line border-t border-[#EEE7DA] pt-4">
                 {activeArticle.content}
               </div>
+              {activeArticle.referenceUrl && (
+                <div className="rounded-xl border border-[#EEE7DA] bg-[#FAF7F0] p-4 text-xs">
+                  <strong className="text-[#183D2B]">แหล่งอ้างอิงภายนอก</strong>
+                  <p className="mt-1"><a href={activeArticle.referenceUrl} target="_blank" rel="noreferrer" className="text-blue-700 underline break-all" onClick={(event) => event.stopPropagation()}>{activeArticle.referenceUrl}</a></p>
+                </div>
+              )}
 
               <div className="pt-6 border-t border-[#EEE7DA] flex items-center justify-between text-xs text-[#7A746B]">
                 <span>จัดทำโดย SACRED CANOPY บทความทางวิชาการ</span>

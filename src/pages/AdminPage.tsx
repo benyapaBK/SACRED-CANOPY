@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { store } from '../services/store';
+import { db } from '../services/firebase';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Plant, Category, Article, FAQ, ContactMessage, AuditLog, UserProfile, FileImportResult } from '../types';
 import { SAMPLE_PLANTS_DATA } from '../data/plants';
 import { 
@@ -115,6 +117,109 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
+  const [articleImportFeedback, setArticleImportFeedback] = useState('');
+  const [maintenanceNotice, setMaintenanceNotice] = useState({
+    enabled: false, title: '', message: '', startAt: '', endAt: '', status: 'normal' as 'normal' | 'maintenance'
+  });
+  const [maintenanceFeedback, setMaintenanceFeedback] = useState('');
+  const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
+
+  useEffect(() => {
+    getDoc(doc(db, 'siteSettings', 'maintenanceNotice')).then((snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setMaintenanceNotice({
+          enabled: Boolean(data.enabled),
+          title: String(data.title || ''),
+          message: String(data.message || ''),
+          startAt: String(data.startAt || ''),
+          endAt: String(data.endAt || ''),
+          status: data.status === 'maintenance' ? 'maintenance' : 'normal',
+        });
+      }
+    }).catch((error) => console.warn('Could not load maintenance notice', error));
+  }, []);
+
+  const saveMaintenanceNotice = async () => {
+    setMaintenanceFeedback('');
+    try {
+      await setDoc(doc(db, 'siteSettings', 'maintenanceNotice'), {
+        ...maintenanceNotice, updatedAt: serverTimestamp(), updatedBy: currentUser.uid
+      });
+      setMaintenanceFeedback('บันทึกประกาศเรียบร้อยแล้ว');
+      setShowAnnouncementForm(false);
+    } catch (error) {
+      setMaintenanceFeedback('บันทึกไม่สำเร็จ โปรดตรวจสอบสิทธิ์ Admin และ Firestore Rules');
+    }
+  };
+
+  const handleSaveArticle = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingArticle || !editingArticle.title.trim() || !editingArticle.content.trim()) {
+      alert('กรุณากรอกชื่อบทความและเนื้อหา'); return;
+    }
+    const article = {
+      ...editingArticle,
+      slug: editingArticle.slug || editingArticle.title.trim().toLowerCase().replace(/\\s+/g, '-'),
+      publishedAt: editingDate(editingArticle.publishedAt),
+    };
+    if (articles.some((item) => item.articleId === article.articleId)) store.updateArticle(article.articleId, article);
+    else store.addArticle(article);
+    setEditingArticle(null);
+  };
+
+  const editingDate = (value: string) => value || new Date().toISOString().slice(0, 10);
+
+  const handleImportArticles = async (file?: File) => {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      let rows: any[] = [];
+      if (file.name.toLowerCase().endsWith('.json')) {
+        const parsed = JSON.parse(text);
+        rows = Array.isArray(parsed) ? parsed : Array.isArray(parsed.articles) ? parsed.articles : [];
+      } else {
+        const lines = text.split(/\\r?\\n/).filter((line) => line.trim());
+        const parseLine = (line: string) => {
+          const values: string[] = []; let value = ''; let quoted = false;
+          for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"' && line[i + 1] === '"' && quoted) { value += '"'; i++; }
+            else if (ch === '"') quoted = !quoted;
+            else if (ch === ',' && !quoted) { values.push(value); value = ''; }
+            else value += ch;
+          }
+          values.push(value); return values;
+        };
+        const headers = parseLine(lines.shift() || '').map((header) => header.trim());
+        rows = lines.map((line) => Object.fromEntries(parseLine(line).map((value, index) => [headers[index], value])));
+      }
+      if (!rows.length) throw new Error('ไม่พบรายการบทความในไฟล์');
+      let imported = 0;
+      rows.forEach((row, index) => {
+        if (!row.title || !row.content) return;
+        const item: Article = {
+          articleId: String(row.articleId || `article-${Date.now()}-${index}`),
+          title: String(row.title), slug: String(row.slug || ''),
+          excerpt: String(row.excerpt || ''), content: String(row.content),
+          coverImage: String(row.coverImage || ''),
+          category: (row.category || 'เกร็ดความรู้') as Article['category'],
+          author: String(row.author || currentUser.displayName || 'SACRED CANOPY'),
+          readTime: String(row.readTime || '5 นาที'),
+          publishedAt: String(row.publishedAt || new Date().toISOString().slice(0, 10)),
+          status: row.status === 'draft' ? 'draft' : 'published',
+          referenceUrl: String(row.referenceUrl || row.sourceUrl || ''),
+        };
+        if (articles.some((existing) => existing.articleId === item.articleId)) store.updateArticle(item.articleId, item);
+        else store.addArticle(item);
+        imported++;
+      });
+      setArticleImportFeedback(`นำเข้าบทความสำเร็จ ${imported} รายการ`);
+    } catch (error) {
+      setArticleImportFeedback(`นำเข้าไม่สำเร็จ: ${error instanceof Error ? error.message : 'ไฟล์ไม่ถูกต้อง'}`);
+    }
+  };
+
 
   // Registered Users table filters and feedback
   const [userNameFilter, setUserNameFilter] = useState('');
@@ -468,6 +573,50 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               <span className="text-[11px] text-[#7A746B] block">ข้อเสนอแนะและแจ้งข้อมูล</span>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            <section className="xl:col-span-2 rounded-2xl border border-[#EEE7DA] bg-white p-5 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div><h3 className="text-sm font-bold text-[#183D2B]">สถิติและการเปลี่ยนแปลง</h3><p className="text-[11px] text-[#7A746B] mt-1">สรุปจากข้อมูลที่หน้าแอดมินโหลดได้ในขณะนี้</p></div>
+                <span className="text-[10px] text-[#7A746B]">อัปเดต {new Date().toLocaleString('th-TH')}</span>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { label: 'พรรณไม้เผยแพร่', count: activePlants.filter((plant) => plant.status === 'published').length, total: Math.max(activePlants.length, 1), color: 'bg-[#2E7D32]' },
+                  { label: 'บทความเผยแพร่', count: articles.filter((article) => article.status === 'published').length, total: Math.max(articles.length, 1), color: 'bg-[#C6A96B]' },
+                  { label: 'ข้อความรอดำเนินการ', count: pendingMessages.length, total: Math.max(contactMessages.length, 1), color: 'bg-[#C62828]' },
+                  { label: 'สมาชิก', count: registeredUsers.length, total: Math.max(registeredUsers.length, 1), color: 'bg-[#497A9C]' },
+                ].map((stat) => <div key={stat.label} className="space-y-1"><div className="flex justify-between text-xs"><span className="text-[#49382C]">{stat.label}</span><strong className="text-[#183D2B]">{stat.count}</strong></div><div className="h-2.5 rounded-full bg-[#F3EFE5] overflow-hidden"><div className={`h-full rounded-full ${stat.color}`} style={{ width: `${Math.min(100, (stat.count / stat.total) * 100)}%` }} /></div></div>)}
+              </div>
+            </section>
+            <section className="rounded-2xl border border-[#EEE7DA] bg-white p-5 shadow-sm space-y-3">
+              <h3 className="text-sm font-bold text-[#183D2B]">Knowledge Graph · ความสัมพันธ์ข้อมูล</h3>
+              <p className="text-[11px] text-[#7A746B]">แผนภาพเชิงแนวคิดของส่วนประกอบหลักในเว็บไซต์</p>
+              <svg viewBox="0 0 300 190" className="w-full max-h-48" role="img" aria-label="แผนภาพความสัมพันธ์พรรณไม้ หมวดหมู่ บทความ สมาชิก และรายการโปรด">
+                <g stroke="#C6A96B" strokeWidth="2" opacity=".8"><line x1="150" y1="92" x2="68" y2="38"/><line x1="150" y1="92" x2="232" y2="38"/><line x1="150" y1="92" x2="62" y2="145"/><line x1="150" y1="92" x2="238" y2="145"/><line x1="68" y1="38" x2="232" y2="38"/></g>
+                {[{x:150,y:92,w:90,h:38,label:'พรรณไม้',fill:'#183D2B'},{x:68,y:38,w:76,h:32,label:'หมวดหมู่',fill:'#497A5B'},{x:232,y:38,w:76,h:32,label:'บทความ',fill:'#497A5B'},{x:62,y:145,w:82,h:32,label:'สมาชิก',fill:'#9A7B3F'},{x:238,y:145,w:82,h:32,label:'รายการโปรด',fill:'#9A7B3F'}].map((n) => <g key={n.label}><rect x={n.x-n.w/2} y={n.y-n.h/2} width={n.w} height={n.h} rx="10" fill={n.fill}/><text x={n.x} y={n.y+4} fill="white" fontSize="10" textAnchor="middle">{n.label}</text></g>)}
+              </svg>
+              <div className="text-[10px] text-[#7A746B]">เป็นภาพสรุปความสัมพันธ์ของโมดูล ไม่ใช่การ query กราฟข้อมูลสด</div>
+            </section>
+          </div>
+          <section className="rounded-2xl border border-[#EEE7DA] bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3 mb-3"><h3 className="text-sm font-bold text-[#183D2B]">สมาชิกที่เข้าสู่ระบบล่าสุด</h3><span className="text-[10px] text-[#7A746B]">ประมาณการจากเวลาเข้าสู่ระบบล่าสุด ไม่ใช่สถานะออนไลน์เรียลไทม์</span></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {registeredUsers.filter((user) => user.role !== 'guest').sort((a,b) => new Date(b.lastLoginAt || b.createdAt || 0).getTime() - new Date(a.lastLoginAt || a.createdAt || 0).getTime()).slice(0,6).map((user) => {
+                const recent = Boolean(user.lastLoginAt && Date.now() - new Date(user.lastLoginAt).getTime() < 15 * 60 * 1000);
+                return <div key={user.uid} className="flex items-center gap-3 rounded-xl bg-[#FAF7F0] p-3 border border-[#EEE7DA]">{user.avatarUrl ? <img src={user.avatarUrl} className="w-10 h-10 rounded-full object-cover" alt="" /> : <div className="w-10 h-10 rounded-full bg-[#183D2B] text-[#C6A96B] flex items-center justify-center font-bold">{(user.displayName || '?').slice(0,1)}</div>}<div className="min-w-0 flex-1"><div className="text-xs font-bold text-[#183D2B] truncate">{user.displayName || user.email}</div><div className="text-[10px] text-[#7A746B] truncate">{user.email}</div><div className={`text-[10px] mt-1 ${recent ? 'text-green-700' : 'text-stone-500'}`}>{recent ? 'เข้าสู่ระบบภายใน 15 นาที' : `ล่าสุด ${formatMemberCreatedAt(user.lastLoginAt || user.createdAt)}`}</div></div></div>;
+              })}
+              {registeredUsers.length === 0 && <p className="text-xs text-[#7A746B]">ยังไม่มีบัญชีสมาชิกให้แสดง</p>}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-[#EEE7DA] bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold text-[#183D2B]">กิจกรรมล่าสุดของเว็บไซต์</h3><button onClick={() => setActiveTab('logs')} className="text-xs text-[#A48545] underline">ดู Audit Logs ทั้งหมด</button></div>
+            <div className="space-y-2">
+              {auditLogs.slice(0,5).map((log) => <div key={log.logId} className="flex items-start gap-3 rounded-lg bg-[#FAF7F0] p-3"><span className="mt-1 w-2 h-2 rounded-full bg-[#C6A96B] shrink-0" /><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-[#183D2B]">{log.summary}</p><p className="text-[10px] text-[#7A746B] mt-1">{log.actor} · {new Date(log.timestamp).toLocaleString('th-TH')}</p></div></div>)}
+              {auditLogs.length === 0 && <p className="text-xs text-[#7A746B]">ยังไม่มีบันทึกกิจกรรมที่โหลดมาแสดง</p>}
+            </div>
+          </section>
 
           {/* Quick Import Action Banner */}
           <div className="p-6 rounded-2xl bg-[#FAF7F0] border border-[#C6A96B]/40 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -856,44 +1005,86 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
       {/* 5. Articles Management */}
       {activeTab === 'articles' && (
-        <div className="space-y-4 animate-in fade-in">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-[#183D2B]">คลังบทความและวิชาการ ({articles.length} เรื่อง)</h3>
+        <div className="space-y-5 animate-in fade-in">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-[#183D2B]">คลังบทความและวิชาการ ({articles.length} เรื่อง)</h3>
+              <p className="text-xs text-[#7A746B] mt-1">เพิ่ม แก้ไข ดู ลบ และนำเข้าบทความ JSON/CSV พร้อม URL อ้างอิงจากเว็บไซต์ภายนอก</p>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <label className="px-3 py-2 rounded-lg border border-[#EEE7DA] bg-white text-xs font-semibold cursor-pointer hover:bg-[#FAF7F0]">
+                <Upload className="w-4 h-4 inline mr-1" />นำเข้า JSON/CSV
+                <input type="file" accept=".json,.csv,application/json,text/csv" className="hidden" onChange={(e) => { void handleImportArticles(e.target.files?.[0]); e.currentTarget.value = ''; }} />
+              </label>
+              <button onClick={() => setEditingArticle({ articleId: `article-${Date.now()}`, title: '', slug: '', excerpt: '', content: '', coverImage: '', category: 'เกร็ดความรู้', author: currentUser.displayName, readTime: '5 นาที', publishedAt: new Date().toISOString().slice(0,10), status: 'draft', referenceUrl: '' })} className="px-4 py-2 bg-[#183D2B] text-white rounded-lg text-xs font-bold"><Plus className="w-4 h-4 inline mr-1" />เพิ่มบทความ</button>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {articleImportFeedback && <p className="text-xs rounded-lg bg-[#F1F8EE] text-[#27632A] border border-[#D7E8D2] p-3">{articleImportFeedback}</p>}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {articles.map((art) => (
-              <div key={art.articleId} className="bg-white p-4 rounded-xl border border-[#EEE7DA] shadow-sm space-y-2">
-                <div className="aspect-[16/9] rounded-lg overflow-hidden bg-stone-200">
-                  <img src={art.coverImage} alt={art.title} className="w-full h-full object-cover" />
+              <div key={art.articleId} className="bg-white p-4 rounded-xl border border-[#EEE7DA] shadow-sm space-y-2 flex flex-col">
+                <div className="aspect-[16/9] rounded-lg overflow-hidden bg-[#F3EFE5]">
+                  {art.coverImage ? <img src={art.coverImage} alt={art.title} className="w-full h-full object-cover" /> : <div className="h-full flex items-center justify-center text-4xl">🌿</div>}
                 </div>
-                <span className="text-[11px] text-[#A48545] font-semibold">{art.category}</span>
-                <h4 className="text-xs font-bold text-[#183D2B] line-clamp-2">{art.title}</h4>
+                <span className="text-[11px] text-[#A48545] font-semibold">{art.category} · {art.status === 'published' ? 'เผยแพร่' : 'ฉบับร่าง'}</span>
+                <h4 className="text-sm font-bold text-[#183D2B]">{art.title}</h4>
+                <p className="text-xs text-[#7A746B] line-clamp-3">{art.excerpt}</p>
                 <div className="text-[10px] text-[#7A746B]">{art.author} · {art.publishedAt}</div>
+                {art.referenceUrl && <a className="text-xs text-blue-700 underline break-all" href={art.referenceUrl} target="_blank" rel="noreferrer">เปิดแหล่งอ้างอิง ↗</a>}
+                <div className="flex gap-2 mt-auto pt-2">
+                  <button onClick={() => setEditingArticle({ ...art })} className="px-3 py-1.5 rounded-lg border border-[#EEE7DA] text-xs font-semibold"><Edit3 className="w-3.5 h-3.5 inline mr-1" />แก้ไข/ดู</button>
+                  <button onClick={() => { if (window.confirm(`ลบบทความ “${art.title}” หรือไม่?`)) store.deleteArticle(art.articleId); }} className="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-semibold"><Trash2 className="w-3.5 h-3.5 inline mr-1" />ลบ</button>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* 6. FAQ Management */}
+      {/* 6. FAQ + maintenance announcements */}
       {activeTab === 'faqs' && (
-        <div className="space-y-4 animate-in fade-in">
-          <div className="text-sm font-bold text-[#183D2B]">
-            คำถามและคำตอบที่พบบ่อย (Help Center FAQs: {faqs.length} ข้อ)
-          </div>
-          <div className="space-y-3">
-            {faqs.map((faq) => (
-              <div key={faq.faqId} className="bg-white p-4 rounded-xl border border-[#EEE7DA] shadow-sm space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#183D2B]">{faq.question}</span>
-                  <span className="text-[10px] text-[#A48545] bg-[#FAF7F0] px-2 py-0.5 rounded">
-                    {faq.category}
-                  </span>
-                </div>
-                <p className="text-xs text-[#7A746B] leading-relaxed">{faq.answer}</p>
+        <div className="space-y-8 animate-in fade-in">
+          <section className="rounded-2xl border border-[#C6A96B]/40 bg-white p-5 sm:p-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-[#183D2B]">ประกาศเว็บไซต์ / แจ้งปรับปรุงระบบ</h3>
+                <p className="text-xs text-[#7A746B] mt-1">ประกาศที่เปิดใช้งานจะแสดงเหนือรายการคำถามในหน้าช่วยเหลือ</p>
               </div>
-            ))}
-          </div>
+              <button onClick={() => setShowAnnouncementForm((value) => !value)} className="px-3 py-2 rounded-lg bg-[#183D2B] text-white text-xs font-bold">{showAnnouncementForm ? 'ปิดฟอร์ม' : 'แก้ไขประกาศ'}</button>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className={`rounded-full px-3 py-1 font-bold ${maintenanceNotice.enabled ? (maintenanceNotice.status === 'maintenance' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800') : 'bg-stone-100 text-stone-600'}`}>{maintenanceNotice.enabled ? (maintenanceNotice.status === 'maintenance' ? 'กำลังแจ้งปรับปรุง' : 'ประกาศปกติ') : 'ไม่มีประกาศที่เปิดใช้งาน'}</span>
+              {maintenanceNotice.startAt && <span className="text-[#7A746B]">{maintenanceNotice.startAt.replace('T',' ')} – {maintenanceNotice.endAt.replace('T',' ')}</span>}
+            </div>
+            {showAnnouncementForm && <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="text-xs font-semibold">หัวข้อประกาศ<input value={maintenanceNotice.title} onChange={(e) => setMaintenanceNotice({ ...maintenanceNotice, title: e.target.value })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+              <label className="text-xs font-semibold">สถานะ<select value={maintenanceNotice.status} onChange={(e) => setMaintenanceNotice({ ...maintenanceNotice, status: e.target.value as 'normal' | 'maintenance' })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal"><option value="normal">ประกาศทั่วไป</option><option value="maintenance">แจ้งปรับปรุงระบบ</option></select></label>
+              <label className="text-xs font-semibold">เริ่มแสดง<input type="datetime-local" value={maintenanceNotice.startAt} onChange={(e) => setMaintenanceNotice({ ...maintenanceNotice, startAt: e.target.value })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+              <label className="text-xs font-semibold">สิ้นสุด<input type="datetime-local" value={maintenanceNotice.endAt} onChange={(e) => setMaintenanceNotice({ ...maintenanceNotice, endAt: e.target.value })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+              <label className="md:col-span-2 text-xs font-semibold">รายละเอียด<textarea rows={3} value={maintenanceNotice.message} onChange={(e) => setMaintenanceNotice({ ...maintenanceNotice, message: e.target.value })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+              <label className="md:col-span-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={maintenanceNotice.enabled} onChange={(e) => setMaintenanceNotice({ ...maintenanceNotice, enabled: e.target.checked })} />เปิดแสดงประกาศ</label>
+              <div className="md:col-span-2 flex gap-2"><button onClick={() => void saveMaintenanceNotice()} className="px-4 py-2 rounded-lg bg-[#183D2B] text-white text-xs font-bold">บันทึกประกาศ</button><button onClick={() => { const cleared = { enabled: false, title: '', message: '', startAt: '', endAt: '', status: 'normal' as const }; setMaintenanceNotice(cleared); void setDoc(doc(db, 'siteSettings', 'maintenanceNotice'), { ...cleared, updatedAt: serverTimestamp(), updatedBy: currentUser.uid }).then(() => setMaintenanceFeedback('ปิดประกาศแล้ว')).catch(() => setMaintenanceFeedback('ปิดประกาศไม่สำเร็จ โปรดตรวจสอบสิทธิ์')); }} className="px-4 py-2 rounded-lg border border-red-200 text-red-600 text-xs font-bold">ปิด/ล้างประกาศ</button></div>
+            </div>}
+            {maintenanceFeedback && <p className="text-xs text-[#A48545]" role="status">{maintenanceFeedback}</p>}
+          </section>
+          <section className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-bold text-[#183D2B]">คำถามและคำตอบที่พบบ่อย ({faqs.length} ข้อ)</div>
+              <button onClick={() => setEditingFaq({ faqId: `faq-${Date.now()}`, question: '', answer: '', category: 'ทั่วไป', sortOrder: faqs.length + 1 })} className="px-3 py-2 rounded-lg bg-[#183D2B] text-white text-xs font-bold"><Plus className="w-4 h-4 inline mr-1" />เพิ่ม FAQ</button>
+            </div>
+            <div className="space-y-3">
+              {faqs.map((faq) => (
+                <div key={faq.faqId} className="bg-white p-4 rounded-xl border border-[#EEE7DA] shadow-sm space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-[#183D2B]">{faq.question}</span>
+                    <span className="text-[10px] text-[#A48545] bg-[#FAF7F0] px-2 py-0.5 rounded">{faq.category}</span>
+                  </div>
+                  <p className="text-xs text-[#7A746B] leading-relaxed whitespace-pre-wrap">{faq.answer}</p>
+                  <div className="flex gap-2"><button onClick={() => setEditingFaq({ ...faq })} className="px-3 py-1.5 rounded-lg border border-[#EEE7DA] text-xs font-semibold"><Edit3 className="w-3.5 h-3.5 inline mr-1" />แก้ไข</button><button onClick={() => { if (window.confirm('ลบ FAQ นี้หรือไม่?')) store.deleteFaq(faq.faqId); }} className="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-semibold"><Trash2 className="w-3.5 h-3.5 inline mr-1" />ลบ</button></div>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
       )}
 
@@ -903,10 +1094,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h3 className="text-sm font-bold text-[#183D2B]">
-                ตารางสมาชิกและกำหนดบทบาท ({registeredUsers.length} บัญชี)
+                ตารางสมาชิกและบทบาท ({registeredUsers.length} บัญชี)
               </h3>
               <p className="mt-1 text-xs text-[#7A746B]">
-                ตรวจสอบชื่อ อีเมล วิธีสมัคร วันที่สมัครครั้งแรก และเลือกว่าใครเป็น Member หรือ Admin
+                ตรวจสอบชื่อ อีเมล วิธีสมัคร วันที่สมัครครั้งแรก และบทบาทที่กำหนดไว้โดยระบบความปลอดภัย
               </p>
             </div>
             <div className="text-xs text-[#7A746B]">แสดง {filteredRegisteredUsers.length} จาก {registeredUsers.length} บัญชี</div>
@@ -944,7 +1135,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     <th className="p-3.5 font-bold">อีเมล</th>
                     <th className="p-3.5 font-bold">วิธีสมัครเว็บไซต์</th>
                     <th className="p-3.5 font-bold">วันที่สมัครครั้งแรก</th>
-                    <th className="p-3.5 font-bold">กำหนดบทบาท</th>
+                    <th className="p-3.5 font-bold">บทบาท</th>
                     <th className="p-3.5 font-bold">สถานะบัญชี</th>
                   </tr>
                 </thead>
@@ -974,16 +1165,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                       </td>
                       <td className="p-3.5 whitespace-nowrap text-[#49382C]">{formatMemberCreatedAt(user.createdAt)}</td>
                       <td className="p-3.5">
-                        <select
-                          value={user.role === 'admin' ? 'admin' : 'member'}
-                          disabled={savingUserRoleId === user.uid || (user.uid === currentUser.uid && user.role === 'admin')}
-                          onChange={(event) => void handleMemberRoleChange(user.uid, event.target.value as 'member' | 'admin')}
-                          aria-label={`กำหนดบทบาทของ ${user.displayName}`}
-                          className={`min-w-[130px] rounded-lg border px-3 py-2 text-xs font-semibold outline-none focus:border-[#C6A96B] disabled:cursor-not-allowed disabled:opacity-70 ${user.role === 'admin' ? 'border-[#C6A96B] bg-[#FFF8E6] text-[#6B4D0C]' : 'border-[#EEE7DA] bg-white text-[#183D2B]'}`}
-                        >
-                          <option value="member">Member — สมาชิก</option>
-                          <option value="admin" disabled={user.role === 'admin'}>Admin — ผู้ดูแล</option>
-                        </select>
+                        <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold ${user.role === 'admin' ? 'bg-[#FFF3CD] text-[#805B00] border border-[#E5C46B]' : 'bg-[#EEF5EE] text-[#245A36] border border-[#D5E5D5]'}`}>
+                          {user.role === 'admin' ? 'Admin · ผู้ดูแลระบบ' : 'Member · สมาชิก'}
+                        </span>
                       </td>
                       <td className="p-3.5">
                         <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold ${user.status === 'suspended' ? 'text-[#C62828]' : 'text-[#2E7D32]'}`}>
@@ -1001,7 +1185,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             </div>
           </div>
           <p className="text-[11px] leading-relaxed text-[#7A746B]">
-            หมายเหตุ: การเปลี่ยนบทบาทจะบันทึกผ่าน Cloud Function และ Firebase Custom Claims จริง ไม่ได้เปลี่ยนเฉพาะหน้าจอ หากมีข้อผิดพลาด ระบบจะแสดงข้อความด้านบน
+            บทบาทแสดงตามสิทธิ์ที่ได้รับการกำหนดผ่าน Firebase Custom Claims โดยผู้ดูแลที่ได้รับอนุญาต
           </p>
         </div>
       )}
@@ -1035,6 +1219,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                       <option value="replied">ตอบกลับแล้ว (Replied)</option>
                       <option value="closed">ปิดเรื่อง (Closed)</option>
                     </select>
+                    {(msg.status === 'replied' || msg.status === 'closed') && (
+                      <button onClick={() => { if (window.confirm('ลบข้อความที่ดำเนินการเสร็จแล้วนี้หรือไม่?')) void store.deleteContactMessage(msg.messageId); }} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1 text-[10px] font-semibold text-red-600 hover:bg-red-50">
+                        <Trash2 className="h-3.5 w-3.5" /> ลบข้อความ
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -1070,6 +1259,40 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {editingArticle && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <form onSubmit={handleSaveArticle} className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl p-5 sm:p-7 space-y-4 my-6 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between"><h3 className="text-lg font-bold text-[#183D2B]">{articles.some((item) => item.articleId === editingArticle.articleId) ? 'แก้ไขบทความ' : 'เพิ่มบทความใหม่'}</h3><button type="button" onClick={() => setEditingArticle(null)} className="p-2 rounded-lg hover:bg-[#FAF7F0]"><X className="w-5 h-5" /></button></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="text-xs font-semibold">ชื่อบทความ *<input required value={editingArticle.title} onChange={(e) => setEditingArticle({ ...editingArticle, title: e.target.value })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+              <label className="text-xs font-semibold">Slug<input value={editingArticle.slug} onChange={(e) => setEditingArticle({ ...editingArticle, slug: e.target.value })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+              <label className="text-xs font-semibold">หมวดหมู่<select value={editingArticle.category} onChange={(e) => setEditingArticle({ ...editingArticle, category: e.target.value as Article['category'] })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal">{['เกร็ดความรู้','ประวัติและวัฒนธรรม','การดูแลรักษา','การจัดสวน','พฤกษศาสตร์'].map((cat) => <option key={cat} value={cat}>{cat}</option>)}</select></label>
+              <label className="text-xs font-semibold">ผู้เขียน<input value={editingArticle.author} onChange={(e) => setEditingArticle({ ...editingArticle, author: e.target.value })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+              <label className="text-xs font-semibold">URL ภาพหน้าปก<input value={editingArticle.coverImage} onChange={(e) => setEditingArticle({ ...editingArticle, coverImage: e.target.value })} placeholder="https://..." className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+              <label className="text-xs font-semibold">URL แหล่งอ้างอิงภายนอก<input type="url" value={editingArticle.referenceUrl || ''} onChange={(e) => setEditingArticle({ ...editingArticle, referenceUrl: e.target.value })} placeholder="https://..." className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+              <label className="text-xs font-semibold">เวลาอ่าน<input value={editingArticle.readTime} onChange={(e) => setEditingArticle({ ...editingArticle, readTime: e.target.value })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+              <label className="text-xs font-semibold">วันที่เผยแพร่<input type="date" value={editingArticle.publishedAt?.slice(0,10) || ''} onChange={(e) => setEditingArticle({ ...editingArticle, publishedAt: e.target.value })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+              <label className="text-xs font-semibold">สถานะ<select value={editingArticle.status} onChange={(e) => setEditingArticle({ ...editingArticle, status: e.target.value as Article['status'] })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal"><option value="draft">ฉบับร่าง</option><option value="published">เผยแพร่</option></select></label>
+              <label className="sm:col-span-2 text-xs font-semibold">คำโปรย<textarea rows={2} value={editingArticle.excerpt} onChange={(e) => setEditingArticle({ ...editingArticle, excerpt: e.target.value })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+              <label className="sm:col-span-2 text-xs font-semibold">เนื้อหาบทความ *<textarea required rows={8} value={editingArticle.content} onChange={(e) => setEditingArticle({ ...editingArticle, content: e.target.value })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+            </div>
+            <div className="flex justify-end gap-2"><button type="button" onClick={() => setEditingArticle(null)} className="px-4 py-2 rounded-lg border border-[#EEE7DA] text-xs">ยกเลิก</button><button type="submit" className="px-5 py-2 rounded-lg bg-[#183D2B] text-white text-xs font-bold">บันทึกบทความ</button></div>
+          </form>
+        </div>
+      )}
+
+      {editingFaq && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={(event) => { event.preventDefault(); if (!editingFaq.question.trim() || !editingFaq.answer.trim()) return; if (faqs.some((item) => item.faqId === editingFaq.faqId)) store.updateFaq(editingFaq.faqId, editingFaq); else store.addFaq(editingFaq); setEditingFaq(null); }} className="bg-white w-full max-w-xl rounded-2xl shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between"><h3 className="text-lg font-bold text-[#183D2B]">{faqs.some((item) => item.faqId === editingFaq.faqId) ? 'แก้ไข FAQ' : 'เพิ่ม FAQ'}</h3><button type="button" onClick={() => setEditingFaq(null)}><X className="w-5 h-5" /></button></div>
+            <label className="block text-xs font-semibold">คำถาม *<input required value={editingFaq.question} onChange={(e) => setEditingFaq({ ...editingFaq, question: e.target.value })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+            <label className="block text-xs font-semibold">คำตอบ *<textarea required rows={5} value={editingFaq.answer} onChange={(e) => setEditingFaq({ ...editingFaq, answer: e.target.value })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+            <label className="block text-xs font-semibold">หมวดหมู่<select value={editingFaq.category} onChange={(e) => setEditingFaq({ ...editingFaq, category: e.target.value as FAQ['category'] })} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal">{['ทั่วไป','การค้นหาต้นไม้','ความเชื่อและพฤกษศาสตร์','ระบบสมาชิก','การแจ้งข้อมูล'].map((cat) => <option key={cat} value={cat}>{cat}</option>)}</select></label>
+            <div className="flex justify-end gap-2"><button type="button" onClick={() => setEditingFaq(null)} className="px-4 py-2 rounded-lg border border-[#EEE7DA] text-xs">ยกเลิก</button><button type="submit" className="px-5 py-2 rounded-lg bg-[#183D2B] text-white text-xs font-bold">บันทึก FAQ</button></div>
+          </form>
         </div>
       )}
 

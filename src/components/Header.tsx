@@ -25,7 +25,8 @@ export type NavigationPage =
   | 'help' 
   | 'about' 
   | 'contact' 
-  | 'admin'
+  | 'admin' 
+  | 'profile' 
   | 'detail';
 
 interface HeaderProps {
@@ -225,6 +226,17 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
                   )}
                 </div>
+
+                <button
+                  onClick={() => {
+                    setUserDropdownOpen(false);
+                    onNavigate('profile');
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-xs text-[#FAF7F0] hover:bg-[#183D2B] flex items-center gap-2.5 transition-colors"
+                >
+                  <User className="w-4 h-4 text-[#C6A96B]" />
+                  <span>โปรไฟล์และความปลอดภัย</span>
+                </button>
 
                 <button
                   onClick={() => {

@@ -154,6 +154,7 @@ export interface Article {
   readTime: string;
   publishedAt: string;
   status: 'published' | 'draft';
+  referenceUrl?: string;
 }
 
 export interface FAQ {

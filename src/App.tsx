@@ -21,6 +21,7 @@ import { HelpPage } from './pages/HelpPage';
 import { AboutPage } from './pages/AboutPage';
 import { ContactPage } from './pages/ContactPage';
 import { AdminPage } from './pages/AdminPage';
+import { ProfilePage } from './pages/ProfilePage';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<NavigationPage>('home');
@@ -74,7 +75,7 @@ export default function App() {
 
   const handleNavigate = (page: NavigationPage) => {
     // Public pages are available to everyone. Quiz and favorites require a Firebase account.
-    if (currentUser.role === 'guest' && (page === 'quiz' || page === 'favorites')) {
+    if (currentUser.role === 'guest' && (page === 'quiz' || page === 'favorites' || page === 'profile')) {
       setAuthModalOpen(true);
       return;
     }
@@ -227,6 +228,10 @@ export default function App() {
 
         {currentPage === 'contact' && (
           <ContactPage currentUser={currentUser} />
+        )}
+
+        {currentPage === 'profile' && currentUser.role !== 'guest' && (
+          <ProfilePage currentUser={currentUser} />
         )}
 
         {currentPage === 'admin' && (

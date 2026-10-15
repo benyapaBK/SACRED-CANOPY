@@ -203,6 +203,20 @@ export const ContactPage: React.FC<{ currentUser: UserProfile }> = ({ currentUse
               </div>
             </div>
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+            <div className="rounded-2xl border border-[#EEE7DA] bg-white p-5 shadow-sm">
+              <h3 className="text-sm font-bold text-[#183D2B] mb-3">ติดต่อเรื่องใดได้บ้าง</h3>
+              <ul className="space-y-2.5 text-xs text-[#49382C]">
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-[#A48545] shrink-0" /><span>แจ้งชื่อพรรณไม้หรือรายละเอียดที่อาจคลาดเคลื่อน</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-[#A48545] shrink-0" /><span>เสนอแหล่งอ้างอิงหรือบทความทางพฤกษศาสตร์</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-[#A48545] shrink-0" /><span>แจ้งปัญหาการใช้งานและข้อเสนอแนะ</span></li>
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-[#C6A96B]/40 bg-[#F4EEDC] p-5">
+              <div className="flex items-center gap-2 text-[#183D2B] font-bold text-sm"><Clock className="w-4 h-4 text-[#A48545]" />การตอบกลับ</div>
+              <p className="text-xs text-[#49382C] leading-relaxed mt-2">ทีมงานจะตรวจสอบข้อความตามลำดับความสำคัญ หากเป็นการแก้ไขข้อมูลพรรณไม้ โปรดระบุชื่อไทยหรือรหัสพรรณไม้และแนบแหล่งอ้างอิงเพื่อช่วยให้ตรวจสอบได้รวดเร็วขึ้น</p>
+            </div>
+          </div>
         </div>
 
         {/* Right Column: Contact Form */}
@@ -421,8 +435,8 @@ export const ContactPage: React.FC<{ currentUser: UserProfile }> = ({ currentUse
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {creators.map((creator, index) => (
             <article key={index} className="bg-white rounded-2xl border border-[#EEE7DA] p-5 shadow-sm">
-              {creator.imageUrl ? <img src={creator.imageUrl} alt={creator.name || creator.role} className="w-24 h-24 rounded-full object-cover mx-auto mb-4 border-2 border-[#C6A96B]" /> : <div className="w-24 h-24 rounded-full bg-[#F3EFE5] flex items-center justify-center mx-auto mb-4 text-3xl">🌱</div>}
-              <h3 className="text-center text-base font-bold text-[#183D2B]">{creator.name || `ผู้ดูแลลำดับที่ ${index + 1}`}</h3>
+              {creator.imageUrl ? <img src={creator.imageUrl} alt={creator.name || creator.role} className="w-36 h-36 sm:w-40 sm:h-40 rounded-full object-cover mx-auto mb-5 border-4 border-[#C6A96B] shadow-lg" /> : <div className="w-36 h-36 sm:w-40 sm:h-40 rounded-full bg-[#F3EFE5] flex items-center justify-center mx-auto mb-5 text-5xl border-4 border-[#C6A96B]/60 shadow-lg">🌱</div>}
+              <h3 className="text-center text-lg font-bold text-[#183D2B]">{creator.name || `ผู้ดูแลลำดับที่ ${index + 1}`}</h3>
               <p className="text-center text-xs font-semibold text-[#A48545] mt-1">{creator.role || 'ผู้ร่วมพัฒนาเว็บไซต์'}</p>
               {creator.bio && <p className="text-xs text-[#7A746B] leading-relaxed mt-3">{creator.bio}</p>}
               {creator.email && <p className="text-xs text-[#49382C] mt-3 break-words">อีเมล: <a className="underline" href={`mailto:${creator.email}`}>{creator.email}</a></p>}

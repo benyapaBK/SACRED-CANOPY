@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from '../services/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { FAQ } from '../types';
 import { NavigationPage } from '../components/Header';
 import { 
@@ -11,7 +13,9 @@ import {
   CheckCircle2, 
   ShieldCheck,
   Compass,
-  Heart
+  Heart,
+  Wrench,
+  BellRing
 } from 'lucide-react';
 
 interface HelpPageProps {
@@ -23,6 +27,17 @@ export const HelpPage: React.FC<HelpPageProps> = ({ faqs, onNavigate }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCat, setSelectedCat] = useState<string>('ทั้งหมด');
   const [openFaqId, setOpenFaqId] = useState<string | null>(faqs[0]?.faqId || null);
+  const [announcement, setAnnouncement] = useState<{enabled?: boolean; title?: string; message?: string; startAt?: string; endAt?: string; status?: string} | null>(null);
+  useEffect(() => {
+    getDoc(doc(db, 'siteSettings', 'maintenanceNotice')).then((snapshot) => {
+      if (snapshot.exists()) setAnnouncement(snapshot.data() as any);
+    }).catch((error) => console.warn('Could not load website announcement', error));
+  }, []);
+  const now = Date.now();
+  const announcementVisible = Boolean(announcement?.enabled)
+    && (!announcement?.startAt || new Date(announcement.startAt).getTime() <= now)
+    && (!announcement?.endAt || new Date(announcement.endAt).getTime() >= now);
+
 
   const categories = ['ทั้งหมด', 'ทั่วไป', 'การค้นหาต้นไม้', 'ความเชื่อและพฤกษศาสตร์', 'ระบบสมาชิก', 'การแจ้งข้อมูล'];
 
@@ -59,6 +74,20 @@ export const HelpPage: React.FC<HelpPageProps> = ({ faqs, onNavigate }) => {
           ค้นหาคำตอบเกี่ยวกับการใช้งานฐานข้อมูล รหัสพรรณไม้ คติความเชื่อ และการจัดเก็บข้อมูล
         </p>
       </div>
+
+      {announcementVisible && (
+        <section className={`rounded-2xl border p-5 sm:p-6 shadow-sm ${announcement?.status === 'maintenance' ? 'bg-amber-50 border-amber-300' : 'bg-[#EAF3E8] border-[#BCD5B8]'}`}>
+          <div className="flex items-start gap-3">
+            <div className={`rounded-xl p-3 ${announcement?.status === 'maintenance' ? 'bg-amber-100 text-amber-800' : 'bg-white text-[#183D2B]'}`}>{announcement?.status === 'maintenance' ? <Wrench className="w-5 h-5" /> : <BellRing className="w-5 h-5" />}</div>
+            <div className="flex-1 space-y-1">
+              <div className="text-[10px] font-bold tracking-widest uppercase">{announcement?.status === 'maintenance' ? 'ประกาศปรับปรุงระบบ' : 'ประกาศจาก SACRED CANOPY'}</div>
+              <h2 className="text-lg font-bold text-[#183D2B]">{announcement?.title || (announcement?.status === 'maintenance' ? 'แจ้งปรับปรุงระบบ' : 'ประกาศจากเว็บไซต์')}</h2>
+              <p className="text-sm leading-relaxed text-[#49382C] whitespace-pre-wrap">{announcement?.message}</p>
+              {(announcement?.startAt || announcement?.endAt) && <p className="text-[11px] text-[#7A746B] mt-2">ช่วงเวลา: {announcement.startAt ? new Date(announcement.startAt).toLocaleString('th-TH') : 'ไม่ระบุเวลาเริ่ม'} – {announcement.endAt ? new Date(announcement.endAt).toLocaleString('th-TH') : 'ไม่ระบุเวลาสิ้นสุด'}</p>}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Quick Search Bar */}
       <div className="max-w-2xl mx-auto relative">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plant, FAQ, UserProfile } from '../types';
 import { NavigationPage } from './Header';
-import { Sparkles, MessageCircle, X, ChevronUp, RefreshCw, Minus, Plus, ExternalLink, Compass } from 'lucide-react';
+import { Sparkles, MessageCircle, X, ChevronUp, RefreshCw, Minus, Plus, ExternalLink, Compass, Move } from 'lucide-react';
 
 const SPROUT_QUOTES = [
   'สวัสดีครับ! ผมชื่อ "น้องต้นกล้า" ยินดีต้อนรับสู่ ร่มโพธิ์ ร่มไทร ครับ 🌱',
@@ -36,6 +36,42 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
   const [chatSize, setChatSize] = useState<'compact' | 'normal' | 'wide'>('normal');
   const [mascotAction, setMascotAction] = useState('01_tonkla_wave.png');
   const [showKnowledge, setShowKnowledge] = useState(false);
+  const [floatingPos, setFloatingPos] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sc-tonkla-position');
+      if (saved) return JSON.parse(saved) as { x: number; y: number };
+    } catch { /* use default position */ }
+    return { x: Math.max(8, window.innerWidth - 112), y: Math.max(8, window.innerHeight - 124) };
+  });
+  const dragRef = React.useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
+
+  useEffect(() => {
+    const clampPosition = () => setFloatingPos((pos) => ({
+      x: Math.min(Math.max(8, pos.x), Math.max(8, window.innerWidth - 96)),
+      y: Math.min(Math.max(8, pos.y), Math.max(8, window.innerHeight - 96)),
+    }));
+    window.addEventListener('resize', clampPosition);
+    return () => window.removeEventListener('resize', clampPosition);
+  }, []);
+
+  const startDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragRef.current = { startX: event.clientX, startY: event.clientY, originX: floatingPos.x, originY: floatingPos.y };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const moveDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (!dragRef.current) return;
+    const drag = dragRef.current;
+    setFloatingPos({
+      x: Math.min(Math.max(8, drag.originX + event.clientX - drag.startX), Math.max(8, window.innerWidth - 96)),
+      y: Math.min(Math.max(8, drag.originY + event.clientY - drag.startY), Math.max(8, window.innerHeight - 96)),
+    });
+  };
+  const endDrag = () => {
+    dragRef.current = null;
+    localStorage.setItem('sc-tonkla-position', JSON.stringify(floatingPos));
+  };
 
   const answerQuestion = (question: string): ChatMessage => {
     const q = question.toLowerCase().trim();
@@ -99,7 +135,7 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
   };
 
   return (
-    <aside aria-label="ผู้ช่วยนำทาง น้องต้นกล้า" className="fixed bottom-4 right-4 z-40 select-none">
+    <aside aria-label="ผู้ช่วยนำทาง น้องต้นกล้า" className="fixed z-40 select-none" style={{ left: floatingPos.x, top: floatingPos.y }}>
       {/* Speech Bubble Dialog */}
       {isOpen && (
         <div className={`mb-3 ${chatSize === 'compact' ? 'w-72' : chatSize === 'wide' ? 'w-[min(92vw,32rem)]' : 'w-72 sm:w-80'} rounded-2xl bg-white p-4 shadow-xl border border-[#C6A96B]/30 animate-in fade-in slide-in-from-bottom-2 duration-300`}>
@@ -170,12 +206,12 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
 
         <button
           onClick={handleMascotClick}
-          className={`relative p-1.5 rounded-full bg-white/90 backdrop-blur-sm shadow-lg border border-[#C6A96B]/40 hover:scale-105 active:scale-95 transition-all duration-300 ${
+          className={`relative block border-0 bg-transparent p-0 shadow-none hover:scale-105 active:scale-95 transition-transform duration-300 ${
             isWaving ? 'animate-bounce' : ''
           }`}
           aria-label="คลิกเพื่อสนทนากับน้องต้นกล้า ผู้ช่วยนำทางไม้มงคล"
         >
-          <img src={`/mascot/${mascotAction}`} alt="น้องต้นกล้า มาสคอตผู้ช่วย SACRED CANOPY" className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-sm" />
+          <img src={`/mascot/${mascotAction}`} alt="น้องต้นกล้า มาสคอตผู้ช่วย SACRED CANOPY" className="h-24 w-24 sm:h-28 sm:w-28 object-contain drop-shadow-[0_8px_10px_rgba(15,39,27,0.28)]" />
 
           {/* Golden Badge Notification Ring */}
           <span className="absolute -top-1 -right-1 flex h-4 w-4">
@@ -184,6 +220,18 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
               !
             </span>
           </span>
+        </button>
+        <button
+          type="button"
+          title="ลากเพื่อย้ายน้องต้นกล้า"
+          aria-label="ลากเพื่อย้ายน้องต้นกล้า"
+          onPointerDown={startDrag}
+          onPointerMove={moveDrag}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-[#C6A96B]/70 bg-[#183D2B]/90 p-1.5 text-[#FAF7F0] shadow-md cursor-move touch-none"
+        >
+          <Move className="h-3.5 w-3.5" />
         </button>
       </div>
     </aside>

@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plant, FAQ, UserProfile } from '../types';
 import { NavigationPage } from './Header';
 import { Sparkles, X, RefreshCw, ExternalLink, Compass } from 'lucide-react';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 
 const SPROUT_QUOTES = [
   'สวัสดีครับ! ผมชื่อ "น้องต้นกล้า" ยินดีต้อนรับสู่ ร่มโพธิ์ ร่มไทร ครับ 🌱',
@@ -35,6 +37,78 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
   const [isThinking, setIsThinking] = useState(false);
   const [mascotAction, setMascotAction] = useState('01_tonkla_wave.png');
   const [showKnowledge, setShowKnowledge] = useState(false);
+  const isAdmin = currentUser?.role === 'admin';
+  // Shared normalized viewport position; all visitors subscribe to the same Firestore value.
+  const [mascotPosition, setMascotPosition] = useState({ x: 0.97, y: 0.94 });
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    offsetX: number;
+    offsetY: number;
+    moved: boolean;
+  } | null>(null);
+  const suppressClickRef = useRef(false);
+
+  useEffect(() => {
+    const positionRef = doc(db, 'siteSettings', 'mascotPosition');
+    const unsubscribe = onSnapshot(positionRef, (snapshot) => {
+      if (!snapshot.exists() || dragRef.current) return;
+      const data = snapshot.data();
+      if (typeof data.x === 'number' && typeof data.y === 'number') {
+        setMascotPosition({
+          x: Math.max(0.02, Math.min(0.99, data.x)),
+          y: Math.max(0.08, Math.min(0.98, data.y)),
+        });
+      }
+    }, (error) => {
+      console.warn('Unable to sync mascot position:', error);
+    });
+    return unsubscribe;
+  }, []);
+
+  const handleMascotPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (!isAdmin || event.pointerType !== 'mouse' || event.button !== 0) return;
+    const anchorX = mascotPosition.x * window.innerWidth;
+    const anchorY = mascotPosition.y * window.innerHeight;
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      offsetX: anchorX - event.clientX,
+      offsetY: anchorY - event.clientY,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleMascotPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!isAdmin || !drag || drag.pointerId !== event.pointerId) return;
+    if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 3) drag.moved = true;
+    if (!drag.moved) return;
+    const x = Math.max(0.02, Math.min(0.99, (event.clientX + drag.offsetX) / window.innerWidth));
+    const y = Math.max(0.08, Math.min(0.98, (event.clientY + drag.offsetY) / window.innerHeight));
+    setMascotPosition({ x, y });
+    event.preventDefault();
+  };
+
+  const finishMascotDrag = async (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    dragRef.current = null;
+    suppressClickRef.current = drag.moved;
+    if (!drag.moved) return;
+    try {
+      await setDoc(doc(db, 'siteSettings', 'mascotPosition'), {
+        x: mascotPosition.x,
+        y: mascotPosition.y,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+    } catch (error) {
+      console.error('Could not save shared mascot position. Check the admin custom claim and Firestore rules.', error);
+    }
+  };
 
   const answerQuestion = (question: string): ChatMessage => {
     const q = question.toLowerCase().trim();
@@ -99,7 +173,7 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
   };
 
   return (
-    <aside aria-label="ผู้ช่วยนำทาง น้องต้นกล้า" className="fixed z-50 select-none bottom-[42px] right-[clamp(20px,3vw,34px)] flex flex-col items-end max-w-[calc(100vw-48px)]">
+    <aside aria-label="ผู้ช่วยนำทาง น้องต้นกล้า" className="fixed z-50 select-none flex flex-col items-end max-w-[calc(100vw-48px)]" style={{ left: `${mascotPosition.x * 100}%`, top: `${mascotPosition.y * 100}%`, right: 'auto', bottom: 'auto', transform: 'translate(-100%, -100%)' }}>
       {/* Speech Bubble Dialog */}
       {isOpen && (
         <div style={{ resize: 'both', width: 'min(420px, calc(100vw - 24px))', height: 'min(560px, 68vh)', minWidth: 'min(280px, calc(100vw - 24px))', minHeight: 'min(300px, 45vh)', maxWidth: 'calc(100vw - 16px)', maxHeight: 'calc(100vh - 260px)', overflow: 'auto', }} className="mb-2 flex flex-col overflow-auto rounded-2xl bg-white/95 backdrop-blur-md p-3 sm:p-4 shadow-[0_14px_42px_rgba(15,39,27,0.18)] border border-[#C6A96B]/45 outline outline-1 outline-[#C6A96B]/10 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -169,7 +243,18 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
         )}
 
         <button
-          onClick={handleMascotClick}
+          onClick={() => {
+            if (suppressClickRef.current) {
+              suppressClickRef.current = false;
+              return;
+            }
+            handleMascotClick();
+          }}
+          onPointerDown={handleMascotPointerDown}
+          onPointerMove={handleMascotPointerMove}
+          onPointerUp={finishMascotDrag}
+          onPointerCancel={finishMascotDrag}
+          style={isAdmin ? { cursor: 'grab', touchAction: 'none' } : undefined}
           className={`relative block border-0 bg-transparent p-0 shadow-none hover:scale-105 active:scale-95 transition-transform duration-300 ${
             isWaving ? 'animate-bounce' : ''
           }`}
@@ -187,8 +272,8 @@ export const SproutMascot: React.FC<SproutMascotProps> = ({ onNavigateToQuiz, pl
               '01_tonkla_wave.png': 1.02,
               '02_tonkla_happy_jump.png': 1,
               '04_tonkla_present_knowledge.png': 1.18,
-              '05_tonkla_chat_typing.png': 1.49,
-              '06_tonkla_surprised.png': 1.50,
+              '05_tonkla_chat_typing.png': 1.18,
+              '06_tonkla_surprised.png': 1.18,
               '08_tonkla_celebrate.png': 1.18,
             };
             return (

@@ -92,6 +92,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   }
 
   // --- Main Admin States ---
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'plants' | 'import' | 'categories' | 'articles' | 'faqs' | 'users' | 'messages' | 'logs'>('overview');
   
   // Plants Table States
@@ -114,7 +116,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // New Category / Article / FAQ Modals
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
   const [articleImportFeedback, setArticleImportFeedback] = useState('');
@@ -590,7 +591,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               </div>
             </section>
             <section className="rounded-2xl border border-[#EEE7DA] bg-white p-5 shadow-sm space-y-3">
-              <h3 className="text-sm font-bold text-[#183D2B]">Knowledge Graph · ความสัมพันธ์ข้อมูล</h3>
+              <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-bold text-[#183D2B]">Knowledge Graph · ความสัมพันธ์ข้อมูล</h3><button onClick={() => setShowKnowledgeGraph(true)} className="rounded-lg bg-[#183D2B] px-3 py-2 text-[11px] font-bold text-white">เปิดกราฟเต็ม</button></div>
               <p className="text-[11px] text-[#7A746B]">แผนภาพเชิงแนวคิดของส่วนประกอบหลักในเว็บไซต์</p>
               <svg viewBox="0 0 300 190" className="w-full max-h-48" role="img" aria-label="แผนภาพความสัมพันธ์พรรณไม้ หมวดหมู่ บทความ สมาชิก และรายการโปรด">
                 <g stroke="#C6A96B" strokeWidth="2" opacity=".8"><line x1="150" y1="92" x2="68" y2="38"/><line x1="150" y1="92" x2="232" y2="38"/><line x1="150" y1="92" x2="62" y2="145"/><line x1="150" y1="92" x2="238" y2="145"/><line x1="68" y1="38" x2="232" y2="38"/></g>
@@ -617,6 +618,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               {auditLogs.length === 0 && <p className="text-xs text-[#7A746B]">ยังไม่มีบันทึกกิจกรรมที่โหลดมาแสดง</p>}
             </div>
           </section>
+
+          {showKnowledgeGraph && <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label="Knowledge Graph"><div className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl border border-[#C6A96B]/50 bg-[#FAF7F0] p-5 shadow-2xl"><div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-widest text-[#A48545]">SACRED CANOPY · BLOOM'S KNOWLEDGE GRAPH</p><h3 className="mt-1 text-xl font-bold text-[#183D2B]">กราฟความสัมพันธ์สารสนเทศ</h3></div><button onClick={() => setShowKnowledgeGraph(false)} aria-label="ปิดกราฟ" className="rounded-full border p-2 hover:bg-white"><X className="h-5 w-5"/></button></div><p className="mt-2 text-xs text-[#7A746B]">ภาพนี้เป็นกราฟเชิงแนวคิดของความสัมพันธ์ระหว่างพรรณไม้ หมวดหมู่ บทความ สมาชิก และรายการโปรด</p><svg viewBox="0 0 720 420" className="mt-4 w-full rounded-xl border bg-white p-3"><g stroke="#C6A96B" strokeWidth="3" opacity=".8"><line x1="360" y1="200" x2="145" y2="90"/><line x1="360" y1="200" x2="570" y2="90"/><line x1="360" y1="200" x2="145" y2="320"/><line x1="360" y1="200" x2="570" y2="320"/><line x1="145" y1="90" x2="570" y2="90"/><line x1="145" y1="320" x2="570" y2="320"/></g>{[{x:360,y:200,w:150,h:64,t:'พรรณไม้',s:`${plants.length} รายการ`,c:'#183D2B'},{x:145,y:90,w:150,h:58,t:'หมวดหมู่',s:`${categories.length} หมวด`,c:'#497A5B'},{x:570,y:90,w:150,h:58,t:'บทความ',s:`${articles.length} เรื่อง`,c:'#497A5B'},{x:145,y:320,w:150,h:58,t:'สมาชิก',s:`${registeredUsers.length} บัญชี`,c:'#A48545'},{x:570,y:320,w:150,h:58,t:'ข้อความติดต่อ',s:`${contactMessages.length} ข้อความ`,c:'#A48545'}].map(n=><g key={n.t}><rect x={n.x-n.w/2} y={n.y-n.h/2} width={n.w} height={n.h} rx="15" fill={n.c}/><text x={n.x} y={n.y-2} textAnchor="middle" fill="white" fontSize="16" fontWeight="bold">{n.t}</text><text x={n.x} y={n.y+18} textAnchor="middle" fill="white" fontSize="12">{n.s}</text></g>)}</svg><div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">{[{t:'พรรณไม้ → หมวดหมู่',d:'พรรณไม้แต่ละรายการสังกัดหมวด A–H'},{t:'พรรณไม้ → บทความ',d:'บทความให้ความรู้และการดูแลเชื่อมโยงกับพรรณไม้'},{t:'สมาชิก → รายการโปรด',d:'สมาชิกบันทึกพรรณไม้ที่สนใจไว้ในบัญชี'},{t:'ผู้ใช้งาน → ข้อความติดต่อ',d:'ข้อความจากผู้ใช้ถูกจัดการในระบบแอดมิน'}].map(x=><div key={x.t} className="rounded-lg border bg-white p-3"><strong className="text-[#183D2B]">{x.t}</strong><p className="mt-1 text-[#7A746B]">{x.d}</p></div>)}</div><div className="mt-4 flex justify-end"><button onClick={() => setShowKnowledgeGraph(false)} className="rounded-lg bg-[#183D2B] px-5 py-2 text-xs font-bold text-white">ปิดหน้าต่าง</button></div></div></div>}
 
           {/* Quick Import Action Banner */}
           <div className="p-6 rounded-2xl bg-[#FAF7F0] border border-[#C6A96B]/40 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -979,9 +982,20 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       {/* 4. Categories Management */}
       {activeTab === 'categories' && (
         <div className="space-y-4 animate-in fade-in">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-[#183D2B]">หมวดหมู่พรรณไม้มาตรฐาน 8 หมวด</h3>
+          <div className="flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-[#183D2B] to-[#28543D] p-5 text-white shadow-md">
+            <div><h3 className="text-base font-bold">หมวดหมู่พรรณไม้มาตรฐาน 8 หมวด</h3><p className="mt-1 text-xs text-[#D5E2D2]">แก้ชื่อ คำอธิบาย และภาพได้ โดยคงรหัสหมวดเดิมไว้</p></div>
+            <button onClick={() => setEditingCategory({ categoryId: `cat-${Date.now()}`, prefix: 'A', name: '', englishName: '', description: '', image: '', sortOrder: categories.length + 1 })} className="rounded-xl bg-[#C6A96B] px-3 py-2 text-xs font-bold text-[#183D2B]">+ เพิ่มหมวดหมู่</button>
           </div>
+          {editingCategory && <form onSubmit={(e) => { e.preventDefault(); if (!editingCategory.name.trim()) return; const exists = categories.some((c) => c.categoryId === editingCategory.categoryId); if (exists) store.updateCategory(editingCategory.categoryId, editingCategory); else store.addCategory(editingCategory); setEditingCategory(null); }} className="grid grid-cols-1 md:grid-cols-2 gap-3 rounded-2xl border border-[#C6A96B]/40 bg-white p-5 shadow-sm">
+            <label className="text-xs font-semibold">ชื่อหมวดหมู่<input required value={editingCategory.name} onChange={(e) => setEditingCategory({...editingCategory, name:e.target.value})} className="mt-1 w-full rounded-lg border p-2.5"/></label>
+            <label className="text-xs font-semibold">ชื่อภาษาอังกฤษ<input value={editingCategory.englishName} onChange={(e) => setEditingCategory({...editingCategory, englishName:e.target.value})} className="mt-1 w-full rounded-lg border p-2.5"/></label>
+            <label className="text-xs font-semibold">รหัสนำหน้า (A-H)<select disabled={categories.some(c=>c.categoryId===editingCategory.categoryId)} value={editingCategory.prefix} onChange={(e) => setEditingCategory({...editingCategory, prefix:e.target.value as Category['prefix'], categoryId:`cat-${e.target.value}`})} className="mt-1 w-full rounded-lg border p-2.5">{'ABCDEFGH'.split('').map(x=><option key={x}>{x}</option>)}</select></label>
+            <label className="text-xs font-semibold">URL ภาพหมวดหมู่<input value={editingCategory.image} onChange={(e) => setEditingCategory({...editingCategory, image:e.target.value})} placeholder="https://... หรือ /images/..." className="mt-1 w-full rounded-lg border p-2.5"/></label>
+            <label className="text-xs font-semibold md:col-span-2">หรืออัปโหลดภาพ<input type="file" accept="image/*" onChange={(e) => { const file=e.target.files?.[0]; if(!file)return; if(file.size>400*1024){alert('ภาพต้องไม่เกิน 400 KB');return;} const reader=new FileReader(); reader.onload=()=>setEditingCategory({...editingCategory,image:String(reader.result||'')}); reader.readAsDataURL(file); }} className="mt-1 block w-full text-xs"/></label>
+            <label className="text-xs font-semibold md:col-span-2">คำอธิบาย<textarea value={editingCategory.description} onChange={(e) => setEditingCategory({...editingCategory, description:e.target.value})} className="mt-1 w-full rounded-lg border p-2.5" rows={3}/></label>
+            {editingCategory.image && <img src={editingCategory.image} alt="ตัวอย่างภาพหมวดหมู่" className="h-28 w-40 rounded-xl border object-cover"/>}
+            <div className="md:col-span-2 flex gap-2"><button className="rounded-lg bg-[#183D2B] px-4 py-2 text-xs font-bold text-white">บันทึกหมวดหมู่</button><button type="button" onClick={()=>setEditingCategory(null)} className="rounded-lg border px-4 py-2 text-xs">ยกเลิก</button></div>
+          </form>}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {categories.map((c) => (
               <div key={c.categoryId} className="bg-white p-5 rounded-xl border border-[#EEE7DA] shadow-sm flex items-start gap-4">
@@ -996,6 +1010,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     </span>
                   </div>
                   <p className="text-xs text-[#7A746B] line-clamp-2">{c.description}</p>
+                  <div className="mt-3 flex items-center gap-2">{c.image && <img src={c.image} alt={c.name} className="h-14 w-20 rounded-lg object-cover border" onError={(e)=>(e.currentTarget.style.display='none')}/>}<button onClick={() => setEditingCategory({...c})} className="rounded-lg border border-[#C6A96B]/50 px-3 py-1.5 text-[11px] font-semibold text-[#183D2B]">แก้ไขหมวดหมู่ / ภาพ</button><button onClick={() => { if (window.confirm(`ลบหมวด ${c.name} หรือไม่? แนะนำให้แก้ไขแทนเพื่อคงหมวดมาตรฐาน 8 หมวด`)) store.deleteCategory(c.categoryId); }} className="rounded-lg border border-red-200 px-2 py-1.5 text-[11px] text-red-600">ลบ</button></div>
                 </div>
               </div>
             ))}
@@ -1198,6 +1213,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           </div>
 
           <div className="space-y-3">
+            {contactMessages.length === 0 && <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#C6A96B]/60 bg-gradient-to-b from-white to-[#F3F5EC] px-5 py-10 text-center"><img src="/mascot/10_tonkla_sleeping.png" alt="น้องต้นกล้าพักผ่อน" className="h-36 w-36 object-contain"/><h4 className="mt-2 text-base font-bold text-[#183D2B]">กล่องข้อความยังว่างอยู่ครับ 🌱</h4><p className="mt-1 max-w-sm text-xs leading-relaxed text-[#7A746B]">ต้นกล้าขอพักรอข้อความใหม่ก่อนนะครับ เมื่อมีผู้ติดต่อเข้ามา ข้อความจะแสดงตรงนี้</p></div>}
             {contactMessages.map((msg) => (
               <div key={msg.messageId} className="bg-white p-5 rounded-xl border border-[#EEE7DA] shadow-sm space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#EEE7DA] pb-2">

@@ -4,6 +4,7 @@ import { Plant, Category, Article, FAQ, ContactMessage, UserProfile, AuditLog } 
 import { Header, NavigationPage } from './components/Header';
 import { Footer } from './components/Footer';
 import { LeafCursor } from './components/LeafCursor';
+import { SiteAudio } from './components/SiteAudio';
 import { SproutMascot } from './components/SproutMascot';
 import { PlantDetailModal } from './components/PlantDetailModal';
 import { DisclaimerModal } from './components/DisclaimerModal';
@@ -116,6 +117,7 @@ export default function App() {
     <div data-user-role={currentUser.role} className="min-h-screen flex flex-col bg-[#FAF7F0] text-[#292B29] selection:bg-[#C6A96B]/30 selection:text-[#183D2B]">
       {/* Custom Leaf Sparkle Cursor */}
       <LeafCursor />
+      <SiteAudio page={currentPage} />
 
       {/* Header with Top Bar Contract */}
       <Header
@@ -261,6 +263,8 @@ export default function App() {
         onSelectPlant={handleSelectPlant}
         allPlants={plants}
         canFavorite={true}
+        currentUser={currentUser}
+        onRequireLogin={() => setAuthModalOpen(true)}
       />
 
       {/* Auth Modal */}

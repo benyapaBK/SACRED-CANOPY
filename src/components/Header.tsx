@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import { 
   Menu, 
   X, 
@@ -9,7 +11,8 @@ import {
   Mail, 
   ChevronDown,
   Sparkles,
-  LogIn
+  LogIn,
+  Bell
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -48,13 +51,19 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [notices, setNotices] = useState<Array<{id:string;title:string;message:string;type:string;published?:boolean;startAt?:string;endAt?:string}>>([]);
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'siteAnnouncements'), snap => setNotices(snap.docs.map(d => ({id:d.id,...d.data()} as any))), () => {});
+    return () => unsub();
+  }, []);
+  const activeNotices = notices.filter(n => n.published !== false && (!n.startAt || new Date(n.startAt).getTime() <= Date.now()) && (!n.endAt || new Date(n.endAt).getTime() >= Date.now())).slice(0,5);
 
   const navLinks = [
     { id: 'database' as NavigationPage, label: 'ฐานข้อมูลไม้มงคล' },
     { id: 'categories' as NavigationPage, label: 'หมวดหมู่ 8 พรรณ' },
     { id: 'beliefs' as NavigationPage, label: 'คติความเชื่อ' },
     { id: 'quiz' as NavigationPage, label: 'ค้นหาต้นไม้ Quiz' },
-    { id: 'history' as NavigationPage, label: 'ประวัติที่เข้าชม' },
     { id: 'articles' as NavigationPage, label: 'เกร็ดความรู้' },
     { id: 'help' as NavigationPage, label: 'ช่วยเหลือ Q&A' },
   ];
@@ -62,11 +71,11 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-[#183D2B] text-[#FAF7F0] border-b border-[#C6A96B]/25 shadow-md">
       {/* Main Navigation Bar (Universal Top Bar Contract: Zone 1 - Zone 2 - Zone 3) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-6">
+      <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-5 xl:px-8 min-h-[76px] flex items-center justify-between gap-2 xl:gap-4">
         {/* Zone 1: Brand Wordmark */}
         <button
           onClick={() => onNavigate('home')}
-          className="flex items-center gap-3 text-left group shrink-0 focus:outline-none"
+          className="flex items-center gap-2 sm:gap-3 text-left group shrink-0 focus:outline-none max-w-[250px]"
         >
           {/* Logo Bodhi Icon */}
           <div className="w-10 h-10 rounded-lg bg-[#0F271B] border border-[#C6A96B]/50 flex items-center justify-center p-2 group-hover:border-[#C6A96B] transition-colors shadow-sm">
@@ -93,7 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* Zone 2: Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-6 text-sm font-medium">
+        <nav className="hidden xl:flex items-center gap-3 2xl:gap-5 text-xs 2xl:text-sm font-medium min-w-0">
           {navLinks.filter((item) => item.id !== 'history' || currentUser.role !== 'guest').map((item) => {
             const isActive = currentPage === item.id;
             return (
@@ -116,7 +125,9 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Zone 3: Primary Action & Utilities */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="relative"><button onClick={() => setNoticeOpen(v=>!v)} className="relative p-2 rounded-lg text-[#FAF7F0]/75 hover:text-[#C6A96B] hover:bg-[#0F271B]/50 transition-colors" title="ประกาศและการแจ้งเตือน" aria-label="ดูประกาศและการแจ้งเตือน" aria-expanded={noticeOpen}><Bell className="w-4 h-4 sm:w-5 sm:h-5"/>{activeNotices.length > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-[#C6A96B] text-[#0F271B] text-[9px] font-bold flex items-center justify-center">{activeNotices.length}</span>}</button>{noticeOpen && <div className="absolute right-0 top-full mt-2 w-[min(88vw,340px)] rounded-xl border border-[#C6A96B]/30 bg-[#0F271B] text-white shadow-2xl z-[60] overflow-hidden"><div className="px-4 py-3 border-b border-white/10 flex items-center justify-between"><strong className="text-xs">ประกาศและกิจกรรม</strong><button onClick={()=>setNoticeOpen(false)} aria-label="ปิดการแจ้งเตือน"><X className="w-4 h-4"/></button></div>{activeNotices.length ? activeNotices.map(n=><button key={n.id} onClick={()=>{setNoticeOpen(false);onNavigate('help')}} className="block w-full text-left px-4 py-3 border-b border-white/5 hover:bg-white/5"><span className="block text-[10px] text-[#C6A96B]">{n.type==='maintenance'?'ปรับปรุงระบบ':n.type==='new-plants'?'พรรณไม้ใหม่':n.type==='activity'?'กิจกรรม':'ประกาศ'}</span><span className="block text-xs font-bold mt-1">{n.title}</span><span className="block text-[10px] text-white/65 mt-1 line-clamp-2">{n.message}</span></button>):<div className="p-5 text-xs text-white/70">ยังไม่มีประกาศใหม่ 🌱</div>}<button onClick={()=>{setNoticeOpen(false);onNavigate('help')}} className="w-full px-4 py-3 text-xs text-[#C6A96B] font-bold text-center">ดูประกาศทั้งหมดในหน้าช่วยเหลือ →</button></div>}</div>
+
           {/* Favorites entry is visible to everyone; guests are prompted to sign in */}
           <button
             onClick={() => onNavigate('favorites')}
@@ -238,6 +249,8 @@ export const Header: React.FC<HeaderProps> = ({
                   <span>โปรไฟล์และความปลอดภัย</span>
                 </button>
 
+                <button onClick={() => { setUserDropdownOpen(false); onNavigate('history'); }} className="w-full px-4 py-2.5 text-left text-xs text-[#FAF7F0] hover:bg-[#183D2B] flex items-center gap-2.5 transition-colors"><Sparkles className="w-4 h-4 text-[#C6A96B]" /><span>ประวัติพรรณไม้ที่เข้าชม</span></button>
+
                 <button
                   onClick={() => {
                     setUserDropdownOpen(false);
@@ -306,6 +319,7 @@ export const Header: React.FC<HeaderProps> = ({
               {item.label}
             </button>
           ))}
+          {currentUser.role !== 'guest' && <button onClick={() => { onNavigate('history'); setMobileMenuOpen(false); }} className="w-full text-left px-3 py-2 rounded-md text-sm text-[#FAF7F0] hover:bg-[#183D2B]">ประวัติพรรณไม้ที่เข้าชม</button>}
           <div className="pt-2 border-t border-white/10 flex flex-col gap-2">
             {currentUser.role !== 'guest' && <button
               onClick={() => {

@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from '../services/firebase';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { Plant, Category, Article } from '../types';
 import { NavigationPage } from '../components/Header';
 import { VideoHeroBackground } from '../components/VideoHeroBackground';
@@ -49,6 +51,16 @@ export const HomePage: React.FC<HomePageProps> = ({
   isMember = false,
 }) => {
   const [heroSearchInput, setHeroSearchInput] = useState('');
+  const [homeNotice, setHomeNotice] = useState<{title?:string;message?:string;status?:string;enabled?:boolean;startAt?:string;endAt?:string}|null>(null);
+  const [homeActivities, setHomeActivities] = useState<Array<{id:string;title:string;message:string;type:string;published:boolean;startAt?:string;endAt?:string}>>([]);
+  useEffect(() => {
+    const unsubNotice = onSnapshot(doc(db,'siteSettings','maintenanceNotice'), snap => setHomeNotice(snap.exists() ? snap.data() as any : null), () => {});
+    const unsubActivities = onSnapshot(collection(db,'siteAnnouncements'), snap => setHomeActivities(snap.docs.map(d=>({id:d.id,...d.data()} as any))), () => {});
+    return () => { unsubNotice(); unsubActivities(); };
+  }, []);
+  const noticeNow = Date.now();
+  const visibleHomeActivities = homeActivities.filter(n => n.published !== false && (!n.startAt || new Date(n.startAt).getTime() <= noticeNow) && (!n.endAt || new Date(n.endAt).getTime() >= noticeNow)).sort((a,b)=>(b.startAt?new Date(b.startAt).getTime():0)-(a.startAt?new Date(a.startAt).getTime():0));
+  const homeNoticeVisible = Boolean(homeNotice?.enabled) && (!homeNotice?.startAt || new Date(homeNotice.startAt).getTime() <= noticeNow) && (!homeNotice?.endAt || new Date(homeNotice.endAt).getTime() >= noticeNow);
 
   const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +72,11 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   return (
     <div className="space-y-20 pb-16 font-body">
+      {(visibleHomeActivities.length > 0 || homeNoticeVisible) && <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 space-y-3" aria-label="ประกาศจากเว็บไซต์">
+        {homeNoticeVisible && <div className={`rounded-2xl border p-4 sm:p-5 flex items-start gap-3 ${homeNotice?.status === 'maintenance' ? 'bg-amber-50 border-amber-300' : 'bg-[#EAF3E8] border-[#BCD5B8]'}`}><span className="text-xl">🔔</span><div><p className="text-[10px] font-bold tracking-wider text-[#A48545]">{homeNotice?.status === 'maintenance' ? 'ประกาศปรับปรุงระบบ' : 'ประกาศจากเว็บไซต์'}</p><h2 className="font-bold text-[#183D2B]">{homeNotice?.title || 'ประกาศจาก SACRED CANOPY'}</h2><p className="text-xs text-[#49382C] mt-1 whitespace-pre-wrap">{homeNotice?.message}</p></div></div>}
+        {visibleHomeActivities.slice(0,2).map(n=><div key={n.id} className="rounded-2xl border border-[#C6A96B]/40 bg-white/90 p-4 sm:p-5 flex items-start gap-3 shadow-sm"><span className="text-xl">{n.type==='maintenance'?'🛠️':n.type==='new-plants'?'🌿':n.type==='activity'?'🎉':'🔔'}</span><div><p className="text-[10px] font-bold tracking-wider text-[#A48545]">{n.type==='maintenance'?'แจ้งปรับปรุงระบบ':n.type==='new-plants'?'พรรณไม้ใหม่':n.type==='activity'?'กิจกรรมเว็บไซต์':'ประกาศจากเว็บไซต์'}</p><h2 className="font-bold text-[#183D2B]">{n.title}</h2><p className="text-xs text-[#49382C] mt-1 whitespace-pre-wrap">{n.message}</p></div></div>)}
+      </section>}
+
       {/* 1. Hero Section with Moving Video/Ambient Botanical Canopy */}
       <section className="relative min-h-[640px] lg:min-h-[720px] flex items-center justify-center text-center text-[#FAF7F0] px-4 sm:px-6 lg:px-8 py-20 overflow-hidden">
         <VideoHeroBackground posterImage="/images/hero_sacred_banyan_canopy_1791992156867.jpg" />

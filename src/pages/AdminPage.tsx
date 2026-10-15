@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { store } from '../services/store';
 import { db } from '../services/firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, addDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { Plant, Category, Article, FAQ, ContactMessage, AuditLog, UserProfile, FileImportResult } from '../types';
 import { SAMPLE_PLANTS_DATA } from '../data/plants';
 import { 
@@ -92,11 +92,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   }
 
   // --- Main Admin States ---
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
-  const [selectedGraphTypes, setSelectedGraphTypes] = useState<string[]>(['plants', 'categories', 'articles', 'users', 'contributors', 'messages']);
-  const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'plants' | 'import' | 'categories' | 'articles' | 'faqs' | 'users' | 'messages' | 'logs'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'plants' | 'import' | 'categories' | 'articles' | 'faqs' | 'activities' | 'users' | 'messages' | 'logs'>('overview');
   
   // Plants Table States
   const [plantSearch, setPlantSearch] = useState('');
@@ -118,6 +114,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // New Category / Article / FAQ Modals
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
   const [articleImportFeedback, setArticleImportFeedback] = useState('');
@@ -126,6 +123,20 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   });
   const [maintenanceFeedback, setMaintenanceFeedback] = useState('');
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
+  const [activityNotices, setActivityNotices] = useState<Array<{id:string;title:string;message:string;type:string;published:boolean;startAt?:string;endAt?:string;createdAt?:any}>>([]);
+  const [activityDraft, setActivityDraft] = useState({ title: '', message: '', type: 'activity', startAt: '', endAt: '', published: true });
+  const [activityFeedback, setActivityFeedback] = useState('');
+  useEffect(() => onSnapshot(collection(db, 'siteAnnouncements'), (snapshot) => {
+    setActivityNotices(snapshot.docs.map((item) => ({ id: item.id, ...item.data() } as any)).sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
+  }, (error) => console.warn('Could not load activity announcements', error)), []);
+  const saveActivityNotice = async () => {
+    if (!activityDraft.title.trim() || !activityDraft.message.trim()) { setActivityFeedback('กรุณากรอกหัวข้อและรายละเอียดประกาศ'); return; }
+    try {
+      await addDoc(collection(db, 'siteAnnouncements'), { ...activityDraft, createdAt: serverTimestamp(), createdBy: currentUser.uid });
+      setActivityDraft({ title: '', message: '', type: 'activity', startAt: '', endAt: '', published: true });
+      setActivityFeedback('บันทึกประกาศแล้ว และจะแสดงบนหน้าโฮม/ช่วยเหลือเมื่ออยู่ในช่วงเวลาที่กำหนด');
+    } catch (error) { console.error(error); setActivityFeedback('บันทึกไม่สำเร็จ ตรวจสอบ Firestore Rules และสิทธิ์ Admin'); }
+  };
 
   useEffect(() => {
     getDoc(doc(db, 'siteSettings', 'maintenanceNotice')).then((snapshot) => {
@@ -520,26 +531,33 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         </div>
       </div>
 
-      {/* Main Navigation Tabs — compact botanical command cards */}
-      <nav aria-label="เมนูควบคุมระบบแอดมิน" className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2 rounded-2xl border border-[#E9E0CF] bg-[#F4F0E7] p-2.5 shadow-inner">
+      {/* Main Navigation Tabs */}
+      <div className="flex border-b border-[#EEE7DA] overflow-x-auto gap-4">
         {[
-          { id: 'overview', label: 'ภาพรวมระบบ', sub: 'Overview', count: null, icon: '✦' },
-          { id: 'plants', label: 'จัดการพรรณไม้', sub: 'Plant library', count: activePlants.length, icon: '❧' },
-          { id: 'import', label: 'ศูนย์นำเข้าไฟล์', sub: 'Import center', count: null, icon: '⇧' },
-          { id: 'categories', label: 'หมวดหมู่', sub: 'Categories', count: categories.length, icon: '◈' },
-          { id: 'articles', label: 'บทความ', sub: 'Articles', count: articles.length, icon: '▤' },
-          { id: 'faqs', label: 'คำถามที่พบบ่อย', sub: 'FAQ & notices', count: faqs.length, icon: '?' },
-          { id: 'users', label: 'สมาชิกและสิทธิ์', sub: 'Members', count: registeredUsers.length, icon: '♙' },
-          { id: 'messages', label: 'ข้อความติดต่อ', sub: 'Inbox', count: pendingMessages.length, icon: '✉' },
-          { id: 'logs', label: 'Audit Logs', sub: 'Activity trail', count: null, icon: '⌁' },
+          { id: 'overview', label: '1. ภาพรวมระบบ (Overview)' },
+          { id: 'plants', label: `2. จัดการพรรณไม้ (${activePlants.length})` },
+          { id: 'import', label: '3. ศูนย์นำเข้าไฟล์ (File Import)' },
+          { id: 'categories', label: `4. หมวดหมู่ (${categories.length})` },
+          { id: 'articles', label: `5. บทความ (${articles.length})` },
+          { id: 'faqs', label: `6. FAQ (${faqs.length})` },
+          { id: 'activities', label: `7. ประกาศ/กิจกรรม (${activityNotices.length})` },
+          { id: 'users', label: `8. สมาชิกและสิทธิ์ (${registeredUsers.length})` },
+          { id: 'messages', label: `9. ข้อความ (${pendingMessages.length})` },
+          { id: 'logs', label: '10. Audit Logs' },
         ].map((tab) => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-current={activeTab === tab.id ? 'page' : undefined}
-            className={`group min-h-[72px] rounded-xl border px-3 py-2.5 text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C6A96B]/60 ${activeTab === tab.id ? 'border-[#183D2B] bg-[#183D2B] text-[#FAF7F0] shadow-md -translate-y-0.5' : 'border-white/80 bg-white/80 text-[#49382C] hover:-translate-y-0.5 hover:border-[#C6A96B]/60 hover:bg-white hover:shadow-sm'}`}>
-            <span className="flex items-center justify-between gap-2"><span className={`flex h-7 w-7 items-center justify-center rounded-lg text-base ${activeTab === tab.id ? 'bg-white/10 text-[#DFC488]' : 'bg-[#F3EFE5] text-[#9A7B3F]'}`}>{tab.icon}</span>{tab.count !== null && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${activeTab === tab.id ? 'bg-white/10 text-[#DFC488]' : 'bg-[#F3EFE5] text-[#7A746B]'}`}>{tab.count}</span>}</span>
-            <span className="mt-2 block text-xs font-bold leading-tight">{tab.label}</span><span className={`mt-0.5 block text-[9px] tracking-wide ${activeTab === tab.id ? 'text-white/60' : 'text-[#9A9184]'}`}>{tab.sub}</span>
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`py-3 px-1 text-xs font-bold whitespace-nowrap border-b-2 transition-colors ${
+              activeTab === tab.id
+                ? 'border-[#183D2B] text-[#183D2B]'
+                : 'border-transparent text-[#7A746B] hover:text-[#183D2B]'
+            }`}
+          >
+            {tab.label}
           </button>
         ))}
-      </nav>
+      </div>
 
       {/* 1. Overview Tab */}
       {activeTab === 'overview' && (
@@ -587,8 +605,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               </div>
             </section>
             <section className="rounded-2xl border border-[#EEE7DA] bg-white p-5 shadow-sm space-y-3">
-              <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-bold text-[#183D2B]">Knowledge Graph · ความสัมพันธ์ข้อมูล</h3><button onClick={() => setShowKnowledgeGraph(true)} className="rounded-lg bg-[#183D2B] px-3 py-2 text-[11px] font-bold text-white">เปิดกราฟเต็ม</button></div>
-              <p className="text-[11px] text-[#7A746B]">คลิกเปิดกราฟเพื่อสำรวจความเชื่อมโยงจากข้อมูลพรรณไม้ หมวดหมู่ บทความ สมาชิก และผู้ลงข้อมูลจริง</p>
+              <h3 className="text-sm font-bold text-[#183D2B]">Knowledge Graph · ความสัมพันธ์ข้อมูล</h3>
+              <p className="text-[11px] text-[#7A746B]">แผนภาพเชิงแนวคิดของส่วนประกอบหลักในเว็บไซต์</p>
               <svg viewBox="0 0 300 190" className="w-full max-h-48" role="img" aria-label="แผนภาพความสัมพันธ์พรรณไม้ หมวดหมู่ บทความ สมาชิก และรายการโปรด">
                 <g stroke="#C6A96B" strokeWidth="2" opacity=".8"><line x1="150" y1="92" x2="68" y2="38"/><line x1="150" y1="92" x2="232" y2="38"/><line x1="150" y1="92" x2="62" y2="145"/><line x1="150" y1="92" x2="238" y2="145"/><line x1="68" y1="38" x2="232" y2="38"/></g>
                 {[{x:150,y:92,w:90,h:38,label:'พรรณไม้',fill:'#183D2B'},{x:68,y:38,w:76,h:32,label:'หมวดหมู่',fill:'#497A5B'},{x:232,y:38,w:76,h:32,label:'บทความ',fill:'#497A5B'},{x:62,y:145,w:82,h:32,label:'สมาชิก',fill:'#9A7B3F'},{x:238,y:145,w:82,h:32,label:'รายการโปรด',fill:'#9A7B3F'}].map((n) => <g key={n.label}><rect x={n.x-n.w/2} y={n.y-n.h/2} width={n.w} height={n.h} rx="10" fill={n.fill}/><text x={n.x} y={n.y+4} fill="white" fontSize="10" textAnchor="middle">{n.label}</text></g>)}
@@ -614,92 +632,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               {auditLogs.length === 0 && <p className="text-xs text-[#7A746B]">ยังไม่มีบันทึกกิจกรรมที่โหลดมาแสดง</p>}
             </div>
           </section>
-
-          {showKnowledgeGraph && (() => {
-            type GraphType = 'plants' | 'categories' | 'articles' | 'users' | 'contributors' | 'messages';
-            type GraphNode = { id: string; type: GraphType; label: string; detail: string; color: string; meta?: string };
-            type GraphEdge = { from: string; to: string; label: string };
-            const nodes: GraphNode[] = [];
-            const edges: GraphEdge[] = [];
-            const plantLimit = activePlants.slice(0, 80);
-            const articleLimit = articles.slice(0, 35);
-            const userLimit = registeredUsers.filter((u) => u.role !== 'guest').slice(0, 35);
-            const messageLimit = contactMessages.slice(0, 20);
-            const creatorIds = new Map<string, string>();
-            const addCreator = (name?: string, email?: string, uid?: string) => {
-              const matchedUser = userLimit.find(u => (uid && u.uid === uid) || (email && u.email.toLowerCase() === email.toLowerCase()) || (name && u.displayName.toLowerCase() === name.toLowerCase()));
-              if (matchedUser) return `user:${matchedUser.uid}`;
-              const cleanName = (name || email || 'ไม่ระบุผู้ลงข้อมูล').trim();
-              const key = (email || cleanName).toLowerCase();
-              const id = creatorIds.get(key) || `creator:${key}`;
-              if (!creatorIds.has(key)) {
-                creatorIds.set(key, id);
-                nodes.push({ id, type: 'contributors', label: cleanName.slice(0, 30), detail: `ผู้ลงข้อมูล: ${cleanName}${email ? `\nอีเมล: ${email}` : ''}${uid ? `\nUID: ${uid}` : ''}`, color: '#98783D', meta: email || 'Contributor' });
-              }
-              return id;
-            };
-            categories.forEach(c => nodes.push({ id: `category:${c.categoryId}`, type: 'categories', label: c.name, detail: `${c.name} (${c.prefix})\n${c.description || ''}`, color: '#477A59', meta: c.prefix }));
-            plantLimit.forEach(p => {
-              nodes.push({ id: `plant:${p.plantId}`, type: 'plants', label: p.thaiName, detail: `${p.thaiName} (${p.scientificName})\nรหัส: ${p.plantId}\nหมวด: ${p.categoryId}\nผู้ลงข้อมูล: ${p.createdByName || p.createdByEmail || 'ไม่ระบุ'}\nอีเมลผู้ลงข้อมูล: ${p.createdByEmail || 'ไม่ระบุ'}\nสถานะ: ${p.status}`, color: '#183D2B', meta: p.plantId });
-              if (categories.some(c => c.categoryId === p.categoryId)) edges.push({ from: `plant:${p.plantId}`, to: `category:${p.categoryId}`, label: 'อยู่ในหมวด' });
-              if (p.createdBy || p.createdByEmail || p.createdByName) edges.push({ from: `plant:${p.plantId}`, to: addCreator(p.createdByName, p.createdByEmail, p.createdBy), label: 'เพิ่มโดย' });
-            });
-            articleLimit.forEach(a => {
-              nodes.push({ id: `article:${a.articleId}`, type: 'articles', label: a.title, detail: `${a.title}\nหมวดบทความ: ${a.category}\nผู้เขียน: ${a.author}\nสถานะ: ${a.status}${a.referenceUrl ? `\nอ้างอิง: ${a.referenceUrl}` : ''}`, color: '#A48545', meta: a.category });
-              const authorId = addCreator(a.author);
-              if (authorId) edges.push({ from: `article:${a.articleId}`, to: authorId, label: 'เขียนโดย' });
-              const content = `${a.title} ${a.excerpt} ${a.content}`.toLowerCase();
-              plantLimit.filter(p => content.includes(p.thaiName.toLowerCase()) || (p.scientificName && content.includes(p.scientificName.toLowerCase()))).slice(0, 4).forEach(p => edges.push({ from: `article:${a.articleId}`, to: `plant:${p.plantId}`, label: 'กล่าวถึง' }));
-            });
-            userLimit.forEach(u => nodes.push({ id: `user:${u.uid}`, type: 'users', label: u.displayName || u.email, detail: `${u.displayName || 'ไม่ระบุชื่อ'}\nอีเมล: ${u.email}\nบทบาท: ${u.role === 'admin' ? 'Admin' : 'Member'}\nสมัครเมื่อ: ${u.createdAt || 'ไม่ระบุ'}\nรายการโปรด: ${(u.favorites || []).length}`, color: u.role === 'admin' ? '#B68B37' : '#5797B9', meta: u.role }));
-            userLimit.forEach(u => (u.favorites || []).forEach(pid => { if (plantLimit.some(p => p.plantId === pid)) edges.push({ from: `user:${u.uid}`, to: `plant:${pid}`, label: 'บันทึกโปรด' }); }));
-            messageLimit.forEach(m => {
-              nodes.push({ id: `message:${m.messageId}`, type: 'messages', label: (m.subject || m.name || 'ข้อความ').slice(0, 26), detail: `หัวข้อ: ${m.subject}\nผู้ส่ง: ${m.name}\nอีเมล: ${m.email}\nสถานะ: ${m.status}\nส่งเมื่อ: ${m.createdAt}`, color: '#8D6C83', meta: m.status });
-              const sender = userLimit.find(u => u.email.toLowerCase() === m.email.toLowerCase());
-              if (sender) edges.push({ from: `message:${m.messageId}`, to: `user:${sender.uid}`, label: 'ส่งโดยสมาชิก' });
-            });
-            const visibleNodes = nodes.filter(n => selectedGraphTypes.includes(n.type));
-            const visibleIds = new Set(visibleNodes.map(n => n.id));
-            const visibleEdges = edges.filter(e => visibleIds.has(e.from) && visibleIds.has(e.to));
-            const positions = new Map(visibleNodes.map((n, i) => {
-              const angle = (Math.PI * 2 * i) / Math.max(visibleNodes.length, 1) - Math.PI / 2;
-              const radius = Math.min(270, 70 + visibleNodes.length * 2.1);
-              return [n.id, { x: 500 + Math.cos(angle) * radius, y: 325 + Math.sin(angle) * radius * 0.72 }];
-            }));
-            const selectedNode = visibleNodes.find(n => n.id === selectedGraphNodeId);
-            const filterOptions: { id: GraphType; label: string }[] = [
-              { id: 'plants', label: 'พรรณไม้' }, { id: 'categories', label: 'หมวดหมู่' }, { id: 'articles', label: 'บทความ' },
-              { id: 'users', label: 'สมาชิก' }, { id: 'contributors', label: 'ผู้ลงข้อมูล/ผู้เขียน' }, { id: 'messages', label: 'ข้อความติดต่อ' },
-            ];
-            return <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#07170F]/70 backdrop-blur-sm p-2 sm:p-5" role="dialog" aria-modal="true" aria-label="Knowledge Graph">
-              <div className="flex max-h-[96vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-[#C6A96B]/45 bg-[#FAF7F0] shadow-2xl">
-                <div className="flex items-start justify-between gap-3 border-b border-[#E8DECA] bg-white/80 px-4 py-3 sm:px-6">
-                  <div className="flex items-center gap-3"><img src="/mascot/04_tonkla_present_knowledge.png" alt="น้องต้นกล้านำเสนอความรู้" className="hidden sm:block h-14 w-14 object-contain"/><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A48545]">SACRED CANOPY · BLOOM / KNOWLEDGE GRAPH</p><h3 className="mt-1 text-lg sm:text-xl font-bold text-[#183D2B]">กราฟความสัมพันธ์จากข้อมูลจริงในคลังเว็บไซต์</h3><p className="mt-1 text-[11px] text-[#7A746B]">เลือกชนิดข้อมูล แล้วคลิกโหนดเพื่อดูรายละเอียดและความสัมพันธ์ คล้ายการสำรวจกราฟใน Neo4j</p></div></div>
-                  <button onClick={() => { setShowKnowledgeGraph(false); setSelectedGraphNodeId(null); }} aria-label="ปิดกราฟ" title="ปิดหน้าต่างกราฟ" className="shrink-0 rounded-full border border-[#E8DECA] bg-white p-2 text-[#183D2B] transition hover:bg-[#F3EFE5]"><X className="h-5 w-5"/></button>
-                </div>
-                <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)_260px]">
-                  <aside className="border-b lg:border-b-0 lg:border-r border-[#E8DECA] p-3 sm:p-4">
-                    <div className="text-xs font-bold text-[#183D2B]">เลือกข้อมูลที่ต้องการดู</div><div className="mt-3 space-y-2">{filterOptions.map(option => <label key={option.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#E8DECA] bg-white/70 px-2.5 py-2 text-[11px] text-[#49382C] hover:bg-white"><input type="checkbox" checked={selectedGraphTypes.includes(option.id)} onChange={e => { setSelectedGraphTypes(old => e.target.checked ? [...old, option.id] : old.filter(t => t !== option.id)); setSelectedGraphNodeId(null); }} className="accent-[#183D2B]"/><span>{option.label}</span></label>)}</div>
-                    <div className="mt-4 rounded-xl bg-[#183D2B] p-3 text-[#FAF7F0]"><div className="text-[10px] text-[#DFC488]">โหนดที่แสดง</div><div className="mt-1 text-2xl font-bold tabular-nums">{visibleNodes.length}</div><div className="mt-1 text-[10px] text-white/65">เส้นความสัมพันธ์ {visibleEdges.length} เส้น</div></div>
-                    <p className="mt-3 text-[10px] leading-relaxed text-[#7A746B]">หมายเหตุ: จำกัดการแสดงผลไว้ไม่เกิน 80 พรรณไม้, 35 บทความ, 35 สมาชิก และ 20 ข้อความ เพื่อให้กราฟอ่านง่าย</p>
-                  </aside>
-                  <div className="min-h-[300px] min-w-0 overflow-auto bg-[radial-gradient(circle_at_center,#FFFFFF_0%,#F5F1E8_100%)] p-2 sm:p-3">
-                    <svg viewBox="0 0 1000 650" className="h-full min-h-[380px] w-full rounded-xl" role="img" aria-label="กราฟโหนดและเส้นความสัมพันธ์ข้อมูลจริง">
-                      <defs><pattern id="kg-dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#D8D0BF" opacity=".55"/></pattern></defs><rect width="1000" height="650" fill="url(#kg-dots)"/>
-                      {visibleEdges.map((edge, i) => { const a = positions.get(edge.from); const b = positions.get(edge.to); if (!a || !b) return null; return <g key={`${edge.from}-${edge.to}-${i}`}><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#BBA36F" strokeWidth="1.5" opacity=".55"><title>{edge.label}</title></line></g>; })}
-                      {visibleNodes.map(node => { const pos = positions.get(node.id)!; const isSelected = selectedGraphNodeId === node.id; const label = node.label.length > 19 ? `${node.label.slice(0, 18)}…` : node.label; return <g key={node.id} role="button" tabIndex={0} aria-label={`เลือก ${node.label}`} onClick={() => setSelectedGraphNodeId(node.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setSelectedGraphNodeId(node.id); }} className="cursor-pointer"><circle cx={pos.x} cy={pos.y} r={isSelected ? 35 : 29} fill={node.color} opacity={isSelected ? 1 : .92} stroke={isSelected ? '#183D2B' : '#FFFFFF'} strokeWidth={isSelected ? 4 : 2}><title>{node.label} — {node.type}</title></circle><text x={pos.x} y={pos.y + 4} fill="white" fontSize="10" fontWeight="700" textAnchor="middle">{node.type === 'plants' ? '🌿' : node.type === 'categories' ? 'หมวด' : node.type === 'articles' ? 'บทความ' : node.type === 'users' ? 'สมาชิก' : node.type === 'contributors' ? 'ผู้เขียน' : 'ข้อความ'}</text><text x={pos.x} y={pos.y + 46} fill="#49382C" fontSize="11" fontWeight={isSelected ? '700' : '500'} textAnchor="middle">{label}</text></g>; })}
-                      {visibleNodes.length === 0 && <text x="500" y="320" fill="#7A746B" fontSize="18" textAnchor="middle">เลือกชนิดข้อมูลอย่างน้อยหนึ่งรายการ</text>}
-                    </svg>
-                  </div>
-                  <aside className="overflow-y-auto border-t lg:border-t-0 lg:border-l border-[#E8DECA] bg-white/60 p-3 sm:p-4">
-                    <div className="text-xs font-bold text-[#183D2B]">รายละเอียดโหนด</div>
-                    {selectedNode ? <><div className="mt-3 rounded-xl border border-[#E8DECA] bg-white p-3"><span className="rounded-full px-2 py-1 text-[9px] font-bold uppercase" style={{ backgroundColor: `${selectedNode.color}18`, color: selectedNode.color }}>{filterOptions.find(o => o.id === selectedNode.type)?.label || selectedNode.type}</span><h4 className="mt-3 break-words text-sm font-bold text-[#183D2B]">{selectedNode.label}</h4><p className="mt-2 whitespace-pre-line break-words text-[11px] leading-relaxed text-[#5E594F]">{selectedNode.detail}</p></div><div className="mt-3 text-[11px] font-bold text-[#183D2B]">ความสัมพันธ์ที่พบ</div><div className="mt-2 space-y-2">{visibleEdges.filter(e => e.from === selectedNode.id || e.to === selectedNode.id).map((edge, i) => { const otherId = edge.from === selectedNode.id ? edge.to : edge.from; const other = visibleNodes.find(n => n.id === otherId); return <button key={`${edge.from}-${edge.to}-${i}`} onClick={() => other && setSelectedGraphNodeId(other.id)} className="w-full rounded-lg border border-[#E8DECA] bg-white px-2.5 py-2 text-left hover:border-[#C6A96B]"><span className="block text-[10px] text-[#A48545]">{edge.label}</span><span className="mt-0.5 block text-[11px] font-semibold text-[#183D2B]">{other?.label || otherId}</span></button>; })}{visibleEdges.filter(e => e.from === selectedNode.id || e.to === selectedNode.id).length === 0 && <p className="text-[10px] text-[#7A746B]">ยังไม่มีความสัมพันธ์ที่เชื่อมกับโหนดนี้ในข้อมูลที่เลือก</p>}</div></> : <div className="mt-3 rounded-xl border border-dashed border-[#D8CBAF] p-4 text-[11px] leading-relaxed text-[#7A746B]">คลิกโหนดในกราฟเพื่อดูข้อมูล เช่น รหัสพรรณไม้ หมวดหมู่ ผู้ลงข้อมูล อีเมลผู้เขียน และรายการที่เชื่อมโยง</div>}
-                    <button onClick={() => { setShowKnowledgeGraph(false); setSelectedGraphNodeId(null); }} className="mt-4 w-full rounded-xl bg-[#183D2B] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#25523B]">ปิดหน้าต่างกราฟ</button>
-                  </aside>
-                </div>
-              </div>
-            </div>;
-          })()}
 
           {/* Quick Import Action Banner */}
           <div className="p-6 rounded-2xl bg-[#FAF7F0] border border-[#C6A96B]/40 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -1062,20 +994,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       {/* 4. Categories Management */}
       {activeTab === 'categories' && (
         <div className="space-y-4 animate-in fade-in">
-          <div className="flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-[#183D2B] to-[#28543D] p-5 text-white shadow-md">
-            <div><h3 className="text-base font-bold">หมวดหมู่พรรณไม้มาตรฐาน 8 หมวด</h3><p className="mt-1 text-xs text-[#D5E2D2]">แก้ชื่อ คำอธิบาย และภาพได้ โดยคงรหัสหมวดเดิมไว้</p></div>
-            <button onClick={() => setEditingCategory({ categoryId: `cat-${Date.now()}`, prefix: 'A', name: '', englishName: '', description: '', image: '', sortOrder: categories.length + 1 })} className="rounded-xl bg-[#C6A96B] px-3 py-2 text-xs font-bold text-[#183D2B]">+ เพิ่มหมวดหมู่</button>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-[#183D2B]">หมวดหมู่พรรณไม้มาตรฐาน 8 หมวด</h3>
           </div>
-          {editingCategory && <form onSubmit={(e) => { e.preventDefault(); if (!editingCategory.name.trim()) return; const exists = categories.some((c) => c.categoryId === editingCategory.categoryId); if (exists) store.updateCategory(editingCategory.categoryId, editingCategory); else store.addCategory(editingCategory); setEditingCategory(null); }} className="grid grid-cols-1 md:grid-cols-2 gap-3 rounded-2xl border border-[#C6A96B]/40 bg-white p-5 shadow-sm">
-            <label className="text-xs font-semibold">ชื่อหมวดหมู่<input required value={editingCategory.name} onChange={(e) => setEditingCategory({...editingCategory, name:e.target.value})} className="mt-1 w-full rounded-lg border p-2.5"/></label>
-            <label className="text-xs font-semibold">ชื่อภาษาอังกฤษ<input value={editingCategory.englishName} onChange={(e) => setEditingCategory({...editingCategory, englishName:e.target.value})} className="mt-1 w-full rounded-lg border p-2.5"/></label>
-            <label className="text-xs font-semibold">รหัสนำหน้า (A-H)<select disabled={categories.some(c=>c.categoryId===editingCategory.categoryId)} value={editingCategory.prefix} onChange={(e) => setEditingCategory({...editingCategory, prefix:e.target.value as Category['prefix'], categoryId:`cat-${e.target.value}`})} className="mt-1 w-full rounded-lg border p-2.5">{'ABCDEFGH'.split('').map(x=><option key={x}>{x}</option>)}</select></label>
-            <label className="text-xs font-semibold">URL ภาพหมวดหมู่<input value={editingCategory.image} onChange={(e) => setEditingCategory({...editingCategory, image:e.target.value})} placeholder="https://... หรือ /images/..." className="mt-1 w-full rounded-lg border p-2.5"/></label>
-            <label className="text-xs font-semibold md:col-span-2">หรืออัปโหลดภาพ<input type="file" accept="image/*" onChange={(e) => { const file=e.target.files?.[0]; if(!file)return; if(file.size>400*1024){alert('ภาพต้องไม่เกิน 400 KB');return;} const reader=new FileReader(); reader.onload=()=>setEditingCategory({...editingCategory,image:String(reader.result||'')}); reader.readAsDataURL(file); }} className="mt-1 block w-full text-xs"/></label>
-            <label className="text-xs font-semibold md:col-span-2">คำอธิบาย<textarea value={editingCategory.description} onChange={(e) => setEditingCategory({...editingCategory, description:e.target.value})} className="mt-1 w-full rounded-lg border p-2.5" rows={3}/></label>
-            {editingCategory.image && <img src={editingCategory.image} alt="ตัวอย่างภาพหมวดหมู่" className="h-28 w-40 rounded-xl border object-cover"/>}
-            <div className="md:col-span-2 flex gap-2"><button className="rounded-lg bg-[#183D2B] px-4 py-2 text-xs font-bold text-white">บันทึกหมวดหมู่</button><button type="button" onClick={()=>setEditingCategory(null)} className="rounded-lg border px-4 py-2 text-xs">ยกเลิก</button></div>
-          </form>}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {categories.map((c) => (
               <div key={c.categoryId} className="bg-white p-5 rounded-xl border border-[#EEE7DA] shadow-sm flex items-start gap-4">
@@ -1090,7 +1011,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     </span>
                   </div>
                   <p className="text-xs text-[#7A746B] line-clamp-2">{c.description}</p>
-                  <div className="mt-3 flex items-center gap-2">{c.image && <img src={c.image} alt={c.name} className="h-14 w-20 rounded-lg object-cover border" onError={(e)=>(e.currentTarget.style.display='none')}/>}<button onClick={() => setEditingCategory({...c})} className="rounded-lg border border-[#C6A96B]/50 px-3 py-1.5 text-[11px] font-semibold text-[#183D2B]">แก้ไขหมวดหมู่ / ภาพ</button><button onClick={() => { if (window.confirm(`ลบหมวด ${c.name} หรือไม่? แนะนำให้แก้ไขแทนเพื่อคงหมวดมาตรฐาน 8 หมวด`)) store.deleteCategory(c.categoryId); }} className="rounded-lg border border-red-200 px-2 py-1.5 text-[11px] text-red-600">ลบ</button></div>
                 </div>
               </div>
             ))}
@@ -1134,6 +1054,30 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             ))}
           </div>
         </div>
+      )}
+
+      {activeTab === 'activities' && (
+        <section className="space-y-5 animate-in fade-in">
+          <div className="rounded-2xl bg-[#183D2B] text-white p-6 border border-[#C6A96B]/40">
+            <div className="flex items-center gap-3"><div className="rounded-xl bg-white/10 p-3 text-[#C6A96B]">🔔</div><div><h2 className="text-xl font-bold">ประกาศและกิจกรรมเว็บไซต์</h2><p className="text-xs text-white/70 mt-1">ประกาศที่เผยแพร่จะปรากฏด้านบนหน้าโฮมและหน้าช่วยเหลือ พร้อมแจ้งเตือนผ่านกระดิ่ง</p></div></div>
+          </div>
+          <div className="rounded-2xl bg-white border border-[#EEE7DA] p-5 space-y-4">
+            <h3 className="font-bold text-[#183D2B]">สร้างประกาศใหม่</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="text-xs font-semibold">หัวข้อ<input value={activityDraft.title} onChange={e=>setActivityDraft({...activityDraft,title:e.target.value})} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" placeholder="เช่น กิจกรรมปลูกต้นไม้ประจำเดือน" /></label>
+              <label className="text-xs font-semibold">ประเภท<select value={activityDraft.type} onChange={e=>setActivityDraft({...activityDraft,type:e.target.value})} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal"><option value="activity">กิจกรรม</option><option value="maintenance">แจ้งปรับปรุงระบบ</option><option value="new-plants">พรรณไม้เพิ่มใหม่</option><option value="general">ประกาศทั่วไป</option></select></label>
+              <label className="text-xs font-semibold">เริ่มแสดง (เว้นว่างเพื่อแสดงทันที)<input type="datetime-local" value={activityDraft.startAt} onChange={e=>setActivityDraft({...activityDraft,startAt:e.target.value})} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+              <label className="text-xs font-semibold">สิ้นสุดการแสดง (ไม่บังคับ)<input type="datetime-local" value={activityDraft.endAt} onChange={e=>setActivityDraft({...activityDraft,endAt:e.target.value})} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" /></label>
+              <label className="md:col-span-2 text-xs font-semibold">รายละเอียด<textarea rows={3} value={activityDraft.message} onChange={e=>setActivityDraft({...activityDraft,message:e.target.value})} className="mt-1 w-full rounded-lg border border-[#EEE7DA] p-2 font-normal" placeholder="รายละเอียดกิจกรรมหรือประกาศ" /></label>
+              <label className="md:col-span-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={activityDraft.published} onChange={e=>setActivityDraft({...activityDraft,published:e.target.checked})}/>เผยแพร่ประกาศ</label>
+            </div>
+            <button onClick={()=>void saveActivityNotice()} className="rounded-lg bg-[#183D2B] text-white px-5 py-2.5 text-xs font-bold">บันทึกและเผยแพร่</button>
+            {activityFeedback && <p className="text-xs text-[#7A746B]" role="status">{activityFeedback}</p>}
+          </div>
+          <div className="space-y-3"><h3 className="font-bold text-[#183D2B]">ประกาศที่มีอยู่ ({activityNotices.length})</h3>
+            {activityNotices.length === 0 ? <p className="rounded-xl border border-dashed border-[#C6A96B]/60 p-6 text-center text-sm text-[#7A746B]">ยังไม่มีประกาศ ลองสร้างประกาศแรกได้เลย</p> : activityNotices.map(n=><article key={n.id} className="flex flex-col sm:flex-row sm:items-start gap-3 rounded-xl border border-[#EEE7DA] bg-white p-4"><div className="flex-1"><div className="flex flex-wrap items-center gap-2"><h4 className="font-bold text-[#183D2B]">{n.title}</h4><span className="rounded-full bg-[#F3EFE5] px-2 py-1 text-[10px]">{n.type === 'maintenance' ? 'ปรับปรุงระบบ' : n.type === 'new-plants' ? 'พรรณไม้ใหม่' : n.type === 'activity' ? 'กิจกรรม' : 'ประกาศทั่วไป'}</span><span className={`rounded-full px-2 py-1 text-[10px] ${n.published ? 'bg-green-50 text-green-700' : 'bg-stone-100 text-stone-600'}`}>{n.published ? 'เผยแพร่' : 'ฉบับร่าง'}</span></div><p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-[#49382C]">{n.message}</p><p className="mt-2 text-[10px] text-[#7A746B]">{n.startAt ? `เริ่ม ${new Date(n.startAt).toLocaleString('th-TH')}` : 'เริ่มทันที'}{n.endAt ? ` · สิ้นสุด ${new Date(n.endAt).toLocaleString('th-TH')}` : ''}</p></div><button onClick={()=>{if(window.confirm('ลบประกาศนี้หรือไม่?')) void deleteDoc(doc(db,'siteAnnouncements',n.id));}} className="self-start rounded-lg border border-red-200 px-3 py-2 text-xs text-red-600">ลบประกาศ</button></article>)}
+          </div>
+        </section>
       )}
 
       {/* 6. FAQ + maintenance announcements */}
@@ -1293,7 +1237,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           </div>
 
           <div className="space-y-3">
-            {contactMessages.length === 0 && <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#C6A96B]/60 bg-gradient-to-b from-white to-[#F3F5EC] px-5 py-10 text-center"><img src="/mascot/10_tonkla_sleeping.png" alt="น้องต้นกล้าพักผ่อน" className="h-36 w-36 object-contain"/><h4 className="mt-2 text-base font-bold text-[#183D2B]">กล่องข้อความยังว่างอยู่ครับ 🌱</h4><p className="mt-1 max-w-sm text-xs leading-relaxed text-[#7A746B]">ต้นกล้าขอพักรอข้อความใหม่ก่อนนะครับ เมื่อมีผู้ติดต่อเข้ามา ข้อความจะแสดงตรงนี้</p></div>}
             {contactMessages.map((msg) => (
               <div key={msg.messageId} className="bg-white p-5 rounded-xl border border-[#EEE7DA] shadow-sm space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#EEE7DA] pb-2">

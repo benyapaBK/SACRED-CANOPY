@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Plant, UserProfile } from '../types';
-import { PlantComments } from './PlantComments';
+import { Plant } from '../types';
 import { 
   X, 
   Heart, 
@@ -32,8 +31,6 @@ interface PlantDetailModalProps {
   onSelectPlant: (plant: Plant) => void;
   allPlants: Plant[];
   canFavorite?: boolean;
-  currentUser: UserProfile;
-  onRequireLogin: () => void;
 }
 
 export const PlantDetailModal: React.FC<PlantDetailModalProps> = ({
@@ -44,8 +41,6 @@ export const PlantDetailModal: React.FC<PlantDetailModalProps> = ({
   onSelectPlant,
   allPlants,
   canFavorite = true,
-  currentUser,
-  onRequireLogin,
 }) => {
   const [activeTab, setActiveTab] = useState<'botany' | 'belief' | 'care' | 'safety' | 'reference'>('botany');
   const [copied, setCopied] = useState(false);
@@ -578,8 +573,6 @@ export const PlantDetailModal: React.FC<PlantDetailModalProps> = ({
               </div>
             </section>
           )}
-
-          <PlantComments plantId={plant.plantId} user={currentUser} onRequireLogin={onRequireLogin} />
 
           {/* Related Plants Recommendation */}
           {relatedPlants.length > 0 && (

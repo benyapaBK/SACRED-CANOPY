@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection } from 'firebase/firestore';
 import { FAQ } from '../types';
 import { NavigationPage } from '../components/Header';
 import { 
@@ -28,12 +28,18 @@ export const HelpPage: React.FC<HelpPageProps> = ({ faqs, onNavigate }) => {
   const [selectedCat, setSelectedCat] = useState<string>('ทั้งหมด');
   const [openFaqId, setOpenFaqId] = useState<string | null>(faqs[0]?.faqId || null);
   const [announcement, setAnnouncement] = useState<{enabled?: boolean; title?: string; message?: string; startAt?: string; endAt?: string; status?: string} | null>(null);
+  const [activityNotices, setActivityNotices] = useState<Array<{id:string;title:string;message:string;type:string;published:boolean;startAt?:string;endAt?:string}>>([]);
   useEffect(() => {
-    getDoc(doc(db, 'siteSettings', 'maintenanceNotice')).then((snapshot) => {
-      if (snapshot.exists()) setAnnouncement(snapshot.data() as any);
-    }).catch((error) => console.warn('Could not load website announcement', error));
+    const unsubNotice = onSnapshot(doc(db, 'siteSettings', 'maintenanceNotice'), (snapshot) => {
+      if (snapshot.exists()) setAnnouncement(snapshot.data() as any); else setAnnouncement(null);
+    }, (error) => console.warn('Could not load website announcement', error));
+    const unsubActivities = onSnapshot(collection(db, 'siteAnnouncements'), (snapshot) => {
+      setActivityNotices(snapshot.docs.map((item) => ({ id: item.id, ...item.data() } as any)));
+    }, (error) => console.warn('Could not load activities', error));
+    return () => { unsubNotice(); unsubActivities(); };
   }, []);
   const now = Date.now();
+  const visibleActivities = activityNotices.filter((item) => item.published !== false && (!item.startAt || new Date(item.startAt).getTime() <= now) && (!item.endAt || new Date(item.endAt).getTime() >= now)).sort((a,b)=> (b.startAt ? new Date(b.startAt).getTime() : 0) - (a.startAt ? new Date(a.startAt).getTime() : 0));
   const announcementVisible = Boolean(announcement?.enabled)
     && (!announcement?.startAt || new Date(announcement.startAt).getTime() <= now)
     && (!announcement?.endAt || new Date(announcement.endAt).getTime() >= now);
@@ -74,6 +80,12 @@ export const HelpPage: React.FC<HelpPageProps> = ({ faqs, onNavigate }) => {
           ค้นหาคำตอบเกี่ยวกับการใช้งานฐานข้อมูล รหัสพรรณไม้ คติความเชื่อ และการจัดเก็บข้อมูล
         </p>
       </div>
+
+      {visibleActivities.length > 0 && <section aria-label="ประกาศและกิจกรรมจากเว็บไซต์" className="space-y-3">
+        {visibleActivities.map((item) => <article key={item.id} className={`rounded-2xl border p-5 sm:p-6 shadow-sm ${item.type === 'maintenance' ? 'bg-amber-50 border-amber-300' : 'bg-[#EAF3E8] border-[#BCD5B8]'}`}>
+          <div className="flex items-start gap-3"><div className="rounded-xl bg-white p-3 text-[#183D2B]">{item.type === 'maintenance' ? <Wrench className="w-5 h-5"/> : <BellRing className="w-5 h-5"/>}</div><div className="min-w-0 flex-1"><div className="text-[10px] font-bold tracking-widest uppercase text-[#A48545]">{item.type === 'maintenance' ? 'ประกาศปรับปรุงระบบ' : item.type === 'new-plants' ? 'พรรณไม้ใหม่' : item.type === 'activity' ? 'กิจกรรมเว็บไซต์' : 'ประกาศจาก SACRED CANOPY'}</div><h2 className="text-lg font-bold text-[#183D2B] mt-1">{item.title}</h2><p className="text-sm leading-relaxed text-[#49382C] whitespace-pre-wrap mt-1">{item.message}</p>{(item.startAt || item.endAt) && <p className="text-[11px] text-[#7A746B] mt-2">{item.startAt ? new Date(item.startAt).toLocaleString('th-TH') : 'เริ่มทันที'}{item.endAt ? ` – ${new Date(item.endAt).toLocaleString('th-TH')}` : ''}</p>}</div></div>
+        </article>)}
+      </section>}
 
       {announcementVisible && (
         <section className={`rounded-2xl border p-5 sm:p-6 shadow-sm ${announcement?.status === 'maintenance' ? 'bg-amber-50 border-amber-300' : 'bg-[#EAF3E8] border-[#BCD5B8]'}`}>

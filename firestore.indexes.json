@@ -4,24 +4,56 @@
       "collectionGroup": "plants",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "categoryId", "order": "ASCENDING" },
-        { "fieldPath": "plantId", "order": "ASCENDING" }
+        {
+          "fieldPath": "categoryId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "plantId",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "plants",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "contactMessages",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "plantComments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "plantId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],

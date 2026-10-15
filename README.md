@@ -199,3 +199,8 @@ npm run dev
 ## Firebase production setup (without Firebase Storage)
 
 See **[FIREBASE_SETUP_TH.md](./FIREBASE_SETUP_TH.md)** for setting up Email/Password and Google Authentication, Firestore Rules, Cloud Functions, the first trusted admin Custom Claim, and using local/external image URLs without Firebase Storage.
+
+
+## V6.3 announcement and mascot fix
+
+See `V6.3_ANNOUNCEMENT_MASCOT_FIX_TH.md` for the changes, Firebase rules notes, and test/deploy steps.

@@ -374,6 +374,7 @@ class StoreService {
       'auth/weak-password': 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'auth/invalid-credential': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
       'auth/user-not-found': 'ไม่พบบัญชีนี้', 'auth/wrong-password': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
       'auth/popup-closed-by-user': 'คุณปิดหน้าต่าง Google ก่อนเข้าสู่ระบบเสร็จ',
+      'auth/cancelled-popup-request': 'มีหน้าต่างเข้าสู่ระบบ Google อีกหน้าต่างเปิดอยู่ กรุณาปิดหน้าต่างซ้ำแล้วลองใหม่อีกครั้ง',
       'auth/unauthorized-domain': 'โดเมนนี้ยังไม่ได้รับอนุญาตใน Firebase Authentication',
       'auth/operation-not-allowed': 'ยังไม่ได้เปิดวิธีเข้าสู่ระบบนี้ใน Firebase Console',
       'auth/too-many-requests': 'มีการลองเข้าสู่ระบบหลายครั้งเกินไป กรุณารอสักครู่',

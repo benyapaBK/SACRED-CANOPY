@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { db } from '../services/firebase';
+import React, { useEffect, useState } from 'react';
 import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { isAnnouncementActive, announcementTime, normalizeAnnouncement } from '../utils/announcements';
+import { db } from '../services/firebase';
 import { Plant, Category, Article } from '../types';
 import { NavigationPage } from '../components/Header';
 import { VideoHeroBackground } from '../components/VideoHeroBackground';
@@ -18,7 +19,9 @@ import {
   Flame,
   CheckCircle2,
   Calendar,
-  Layers
+  Layers,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface HomePageProps {
@@ -51,16 +54,49 @@ export const HomePage: React.FC<HomePageProps> = ({
   isMember = false,
 }) => {
   const [heroSearchInput, setHeroSearchInput] = useState('');
-  const [homeNotice, setHomeNotice] = useState<{title?:string;message?:string;status?:string;enabled?:boolean;startAt?:string;endAt?:string}|null>(null);
-  const [homeActivities, setHomeActivities] = useState<Array<{id:string;title:string;message:string;type:string;published:boolean;startAt?:string;endAt?:string}>>([]);
+  const [activeActivities, setActiveActivities] = useState<Array<any>>([]);
+  const [maintenanceNotice, setMaintenanceNotice] = useState<any | null>(null);
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   useEffect(() => {
-    const unsubNotice = onSnapshot(doc(db,'siteSettings','maintenanceNotice'), snap => setHomeNotice(snap.exists() ? snap.data() as any : null), () => {});
-    const unsubActivities = onSnapshot(collection(db,'siteAnnouncements'), snap => setHomeActivities(snap.docs.map(d=>({id:d.id,...d.data()} as any))), () => {});
-    return () => { unsubNotice(); unsubActivities(); };
+    const unsubscribeActivities = onSnapshot(collection(db, 'siteActivities'), (snapshot) => {
+      const active = snapshot.docs.map((entry) => normalizeAnnouncement({ id: entry.id, ...entry.data() } as any))
+        .filter((item): item is NonNullable<typeof item> => Boolean(item) && isAnnouncementActive(item));
+      active.sort((a, b) => {
+        const aTime = announcementTime(a.createdAt) ?? announcementTime(a.updatedAt) ?? 0;
+        const bTime = announcementTime(b.createdAt) ?? announcementTime(b.updatedAt) ?? 0;
+        return bTime - aTime;
+      });
+      setActiveActivities(active);
+    }, (error) => console.warn('Could not load homepage activities; check Firestore rules', error));
+    const unsubscribeMaintenance = onSnapshot(doc(db, 'siteSettings', 'maintenanceNotice'), (snapshot) => {
+      const notice = snapshot.exists() ? normalizeAnnouncement({ id: 'maintenanceNotice', ...snapshot.data(), kind: snapshot.data().status === 'maintenance' ? 'maintenance' : 'news' } as any) : null;
+      setMaintenanceNotice(isAnnouncementActive(notice) && notice?.showInBanner !== false ? notice : null);
+    }, (error) => console.warn('Could not load homepage notice; check Firestore rules', error));
+    return () => { unsubscribeActivities(); unsubscribeMaintenance(); };
   }, []);
-  const noticeNow = Date.now();
-  const visibleHomeActivities = homeActivities.filter(n => n.published !== false && (!n.startAt || new Date(n.startAt).getTime() <= noticeNow) && (!n.endAt || new Date(n.endAt).getTime() >= noticeNow)).sort((a,b)=>(b.startAt?new Date(b.startAt).getTime():0)-(a.startAt?new Date(a.startAt).getTime():0));
-  const homeNoticeVisible = Boolean(homeNotice?.enabled) && (!homeNotice?.startAt || new Date(homeNotice.startAt).getTime() <= noticeNow) && (!homeNotice?.endAt || new Date(homeNotice.endAt).getTime() >= noticeNow);
+  const homepageAnnouncements = [
+    ...(maintenanceNotice ? [maintenanceNotice] : []),
+    ...activeActivities,
+  ];
+  const fallbackBanners = [
+    { id: 'welcome-knowledge', title: 'คลังความรู้พรรณไม้มงคลไทย', message: 'สำรวจพฤกษศาสตร์ วิธีปลูกและดูแล คติความเชื่อ และวัฒนธรรมไทยได้ในที่เดียว', imageUrl: '/images/hero_sacred_banyan_canopy_1791992156867.jpg', kind: 'news', cta: 'สำรวจฐานข้อมูล', page: 'database' as NavigationPage },
+    { id: 'care-knowledge', title: 'ปลูกอย่างเข้าใจ ดูแลอย่างยั่งยืน', message: 'ค้นหาความรู้เรื่องแสง น้ำ ดิน และข้อควรระวังของพรรณไม้ก่อนเลือกปลูก', imageUrl: '/images/thai_botanical_courtyard_1791992219544.jpg', kind: 'news', cta: 'อ่านเกร็ดความรู้', page: 'articles' as NavigationPage },
+    { id: 'belief-knowledge', title: 'ภูมิปัญญาและความเชื่อเรื่องต้นไม้', message: 'เรียนรู้ความสัมพันธ์ระหว่างพรรณไม้ วิถีชีวิต และวัฒนธรรมไทยจากคลังสารสนเทศของเรา', imageUrl: '/images/botanical_ratchaphruek_1791992174219.jpg', kind: 'news', cta: 'เรียนรู้คติความเชื่อ', page: 'beliefs' as NavigationPage },
+  ];
+  // Keep the curated knowledge banners even when live announcements exist.
+  // Active admin announcements become first-class slides rather than replacing the whole carousel.
+  const bannerSlides = [
+    ...homepageAnnouncements.filter((item) => item.showInBanner !== false).map((item) => ({ ...item, isAnnouncement: true, cta: 'อ่านรายละเอียด', page: 'help' as NavigationPage })),
+    ...fallbackBanners.map((item) => ({ ...item, isAnnouncement: false })),
+  ];
+  useEffect(() => {
+    setActiveBannerIndex(0);
+  }, [bannerSlides.length]);
+  useEffect(() => {
+    if (bannerSlides.length < 2) return;
+    const timer = window.setInterval(() => setActiveBannerIndex((index) => (index + 1) % bannerSlides.length), 6500);
+    return () => window.clearInterval(timer);
+  }, [bannerSlides.length]);
 
   const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,11 +108,6 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   return (
     <div className="space-y-20 pb-16 font-body">
-      {(visibleHomeActivities.length > 0 || homeNoticeVisible) && <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 space-y-3" aria-label="ประกาศจากเว็บไซต์">
-        {homeNoticeVisible && <div className={`rounded-2xl border p-4 sm:p-5 flex items-start gap-3 ${homeNotice?.status === 'maintenance' ? 'bg-amber-50 border-amber-300' : 'bg-[#EAF3E8] border-[#BCD5B8]'}`}><span className="text-xl">🔔</span><div><p className="text-[10px] font-bold tracking-wider text-[#A48545]">{homeNotice?.status === 'maintenance' ? 'ประกาศปรับปรุงระบบ' : 'ประกาศจากเว็บไซต์'}</p><h2 className="font-bold text-[#183D2B]">{homeNotice?.title || 'ประกาศจาก SACRED CANOPY'}</h2><p className="text-xs text-[#49382C] mt-1 whitespace-pre-wrap">{homeNotice?.message}</p></div></div>}
-        {visibleHomeActivities.slice(0,2).map(n=><div key={n.id} className="rounded-2xl border border-[#C6A96B]/40 bg-white/90 p-4 sm:p-5 flex items-start gap-3 shadow-sm"><span className="text-xl">{n.type==='maintenance'?'🛠️':n.type==='new-plants'?'🌿':n.type==='activity'?'🎉':'🔔'}</span><div><p className="text-[10px] font-bold tracking-wider text-[#A48545]">{n.type==='maintenance'?'แจ้งปรับปรุงระบบ':n.type==='new-plants'?'พรรณไม้ใหม่':n.type==='activity'?'กิจกรรมเว็บไซต์':'ประกาศจากเว็บไซต์'}</p><h2 className="font-bold text-[#183D2B]">{n.title}</h2><p className="text-xs text-[#49382C] mt-1 whitespace-pre-wrap">{n.message}</p></div></div>)}
-      </section>}
-
       {/* 1. Hero Section with Moving Video/Ambient Botanical Canopy */}
       <section className="relative min-h-[640px] lg:min-h-[720px] flex items-center justify-center text-center text-[#FAF7F0] px-4 sm:px-6 lg:px-8 py-20 overflow-hidden">
         <VideoHeroBackground posterImage="/images/hero_sacred_banyan_canopy_1791992156867.jpg" />
@@ -148,7 +179,41 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 2. Popular 8 Categories Strip */}
+      {/* 2. Homepage banner carousel: active announcements first, curated knowledge slides otherwise */}
+      <section className="max-w-7xl mx-auto -mt-8 px-4 sm:px-6 lg:px-8">
+        {(() => {
+          const slide = bannerSlides[Math.min(activeBannerIndex, bannerSlides.length - 1)];
+          const isLiveAnnouncement = Boolean((slide as any).isAnnouncement);
+          return (
+            <article key={slide.id} aria-live="polite" className="relative min-h-[220px] sm:min-h-[250px] overflow-hidden rounded-2xl border border-[#C6A96B]/45 bg-[#183D2B] shadow-[0_16px_40px_rgba(15,39,27,0.16)]">
+              <img src={(slide as any).imageUrl || '/images/hero_sacred_banyan_canopy_1791992156867.jpg'} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0F271B]/95 via-[#183D2B]/80 to-[#183D2B]/25" />
+              <div className="relative flex min-h-[220px] sm:min-h-[250px] items-center p-5 sm:p-8 lg:p-10">
+                <div className="max-w-3xl pr-2 sm:pr-10">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#DFC488]/35 bg-[#0F271B]/35 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#DFC488]">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {isLiveAnnouncement ? (slide.kind === 'maintenance' ? 'แจ้งปรับปรุงระบบ' : slide.kind === 'new-plants' ? 'พรรณไม้ใหม่' : slide.kind === 'news' ? 'ข่าวเว็บไซต์' : 'กิจกรรมจาก SACRED CANOPY') : 'SACRED CANOPY · KNOWLEDGE'}
+                  </span>
+                  <h2 className="mt-3 text-xl font-bold leading-snug text-white sm:text-2xl lg:text-3xl">{slide.title}</h2>
+                  <p className="mt-2 max-w-2xl whitespace-pre-line text-xs leading-relaxed text-white/85 sm:text-sm">{slide.message}</p>
+                  <button onClick={() => onNavigate(slide.page || 'help')} className="mt-5 inline-flex items-center rounded-xl bg-[#C6A96B] px-4 py-2.5 text-xs font-bold text-[#0F271B] transition hover:bg-[#DFC488]">
+                    {slide.cta || 'อ่านรายละเอียด'} <ArrowRight className="ml-2 h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              {bannerSlides.length > 1 && <>
+                <button aria-label="แบนเนอร์ก่อนหน้า" onClick={() => setActiveBannerIndex((index) => (index - 1 + bannerSlides.length) % bannerSlides.length)} className="absolute right-14 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/35 bg-[#0F271B]/45 text-white backdrop-blur transition hover:bg-[#0F271B]/80"><ChevronLeft className="h-5 w-5" /></button>
+                <button aria-label="แบนเนอร์ถัดไป" onClick={() => setActiveBannerIndex((index) => (index + 1) % bannerSlides.length)} className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/35 bg-[#0F271B]/45 text-white backdrop-blur transition hover:bg-[#0F271B]/80"><ChevronRight className="h-5 w-5" /></button>
+                <div className="absolute bottom-3 right-4 z-10 flex items-center gap-1.5">
+                  {bannerSlides.map((item, index) => <button key={item.id} aria-label={`ไปแบนเนอร์ ${index + 1}`} onClick={() => setActiveBannerIndex(index)} className={`h-1.5 rounded-full transition-all ${index === activeBannerIndex ? 'w-6 bg-[#DFC488]' : 'w-1.5 bg-white/60 hover:bg-white'}`} />)}
+                </div>
+              </>}
+            </article>
+          );
+        })()}
+      </section>
+
+      {/* 3. Popular 8 Categories Strip */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
           <div>

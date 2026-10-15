@@ -70,7 +70,10 @@ export const PlantCard: React.FC<PlantCardProps> = ({
       {/* Content Area */}
       <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
         <div>
-          {/* Unboxed Metadata (Frontend Design Skill: No Pill Enclosure) */}
+          {/* Plant name is centered directly under the photo */}
+          <h3 className="mb-2 text-center text-base font-bold text-[#183D2B] group-hover:text-[#A48545] transition-colors line-clamp-2">{plant.thaiName}</h3>
+          <p className="mb-3 text-center text-xs italic text-[#7A746B] font-serif line-clamp-1">{plant.scientificName}</p>
+          {/* Unboxed Metadata */}
           <div className="text-xs text-[#7A746B] flex items-center gap-1.5 flex-wrap">
             <span className="font-medium text-[#183D2B]">{plant.family}</span>
             <span aria-hidden="true">·</span>
@@ -80,15 +83,6 @@ export const PlantCard: React.FC<PlantCardProps> = ({
           </div>
 
           {/* Plant Thai Name */}
-          <h3 className="mt-1 text-base font-bold text-[#183D2B] group-hover:text-[#A48545] transition-colors line-clamp-1">
-            {plant.thaiName}
-          </h3>
-
-          {/* Scientific Name */}
-          <p className="text-xs italic text-[#7A746B] font-serif line-clamp-1">
-            {plant.scientificName}
-          </p>
-
           {/* Short Cultural Meaning */}
           <p className="mt-2 text-xs text-[#49382C] line-clamp-2 leading-relaxed font-body">
             {plant.belief.culturalMeaning}

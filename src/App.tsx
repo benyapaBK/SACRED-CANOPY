@@ -4,6 +4,7 @@ import { Plant, Category, Article, FAQ, ContactMessage, UserProfile, AuditLog } 
 import { Header, NavigationPage } from './components/Header';
 import { Footer } from './components/Footer';
 import { LeafCursor } from './components/LeafCursor';
+import { SiteAudio } from './components/SiteAudio';
 import { SproutMascot } from './components/SproutMascot';
 import { PlantDetailModal } from './components/PlantDetailModal';
 import { DisclaimerModal } from './components/DisclaimerModal';
@@ -44,6 +45,7 @@ export default function App() {
   // Modals
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [disclaimerModalOpen, setDisclaimerModalOpen] = useState(false);
+  const [mascotNotice, setMascotNotice] = useState<{ message: string; image: string; kind: 'success' | 'warning' } | null>(null);
 
   // Subscribe to central store changes
   useEffect(() => {
@@ -87,9 +89,18 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const showMascotNotice = (message: string, image: string, kind: 'success' | 'warning' = 'warning') => {
+    setMascotNotice({ message, image, kind });
+    window.setTimeout(() => setMascotNotice((current) => current?.message === message ? null : current), 3000);
+  };
+
   const handleToggleFavorite = (plantId: string) => {
-    if (currentUser.role === 'guest') { setAuthModalOpen(true); return; }
-    store.toggleFavorite(plantId);
+    if (currentUser.role === 'guest') { showMascotNotice('เข้าสู่ระบบก่อนนะครับ จึงจะบันทึกต้นไม้ที่ชอบได้ 🌱', '09_tonkla_warning.png'); setAuthModalOpen(true); return; }
+    const wasFavorite = (currentUser.favorites || []).includes(plantId);
+    try {
+      store.toggleFavorite(plantId);
+      if (!wasFavorite) showMascotNotice('เพิ่มต้นไม้ที่ถูกใจสำเร็จแล้วครับ 🌿', '07_tonkla_watering_plant.png', 'success');
+    } catch { showMascotNotice('บันทึกไม่สำเร็จ ลองอีกครั้งนะครับ', '09_tonkla_warning.png'); }
   };
 
   const handleSelectPlant = (plant: Plant) => {
@@ -113,9 +124,10 @@ export default function App() {
   };
 
   return (
-    <div data-user-role={currentUser.role} className="min-h-screen flex flex-col bg-[#FAF7F0] text-[#292B29] selection:bg-[#C6A96B]/30 selection:text-[#183D2B]">
+    <div data-user-role={currentUser.role} onInvalidCapture={(event) => { const target = event.target as HTMLInputElement; if (target.validity?.valueMissing || target.validity?.typeMismatch || target.validity?.patternMismatch) showMascotNotice('ข้อมูลยังไม่ครบหรือรูปแบบไม่ถูกต้องครับ ตรวจช่องที่แจ้งเตือนแล้วลองอีกครั้งนะครับ', '09_tonkla_warning.png'); }} className="min-h-screen flex flex-col bg-[#FAF7F0] text-[#292B29] selection:bg-[#C6A96B]/30 selection:text-[#183D2B]">
       {/* Custom Leaf Sparkle Cursor */}
       <LeafCursor />
+      <SiteAudio page={currentPage} />
 
       {/* Header with Top Bar Contract */}
       <Header
@@ -249,6 +261,8 @@ export default function App() {
         )}
       </main>
 
+      {mascotNotice && <div role="status" aria-live="polite" className={`fixed z-[70] bottom-24 left-1/2 -translate-x-1/2 flex max-w-[min(92vw,460px)] items-center gap-3 rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-200 ${mascotNotice.kind === 'success' ? 'border-[#A8B89A] bg-[#FAF7F0]/95' : 'border-[#C6A96B]/55 bg-[#FFF9E9]/95'}`}><img src={`/mascot/${mascotNotice.image}`} alt="น้องต้นกล้า" className="h-14 w-14 shrink-0 object-contain"/><p className="text-sm leading-relaxed text-[#183D2B]">{mascotNotice.message}</p><button type="button" aria-label="ปิดการแจ้งเตือน" onClick={() => setMascotNotice(null)} className="ml-1 text-[#7A746B] hover:text-[#183D2B]">×</button></div>}
+
       {/* Interactive Mascot "น้องต้นกล้า" */}
       <SproutMascot onNavigateToQuiz={() => handleNavigate('quiz')} plants={plants} faqs={faqs} currentUser={currentUser} onNavigate={handleNavigate} />
 
@@ -261,6 +275,8 @@ export default function App() {
         onSelectPlant={handleSelectPlant}
         allPlants={plants}
         canFavorite={true}
+        currentUser={currentUser}
+        onRequireLogin={() => setAuthModalOpen(true)}
       />
 
       {/* Auth Modal */}

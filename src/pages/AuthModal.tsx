@@ -78,19 +78,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   };
 
   const handleGoogleSignIn = async () => {
+    // Firebase allows only one active popup per app; prevent double-clicks.
+    if (isLoading) return;
     setIsLoading(true);
     setErrorMessage('');
-    const res = await store.loginWithFirebaseGoogle();
-    setIsLoading(false);
-    if (res.success && res.user) {
-      if (adminGatePassed && res.user.role !== 'admin') {
-        await store.logout();
-        setErrorMessage('บัญชีนี้ไม่มีสิทธิ์แอดมิน กรุณาใช้บัญชี Firebase ที่ได้รับสิทธิ์ผู้ดูแลระบบ');
-        return;
-      }
-      onSuccess(res.user);
-      closeModal();
-    } else setErrorMessage(res.error || 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ');
+    try {
+      const res = await store.loginWithFirebaseGoogle();
+      if (res.success && res.user) {
+        if (adminGatePassed && res.user.role !== 'admin') {
+          await store.logout();
+          setErrorMessage('บัญชีนี้ไม่มีสิทธิ์แอดมิน กรุณาใช้บัญชี Firebase ที่ได้รับสิทธิ์ผู้ดูแลระบบ');
+          return;
+        }
+        onSuccess(res.user);
+        closeModal();
+      } else setErrorMessage(res.error || 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -145,7 +150,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-                className="w-full py-2.5 px-4 bg-white border border-[#B8BCC2] hover:border-[#183D2B] text-[#292B29] rounded-xl text-xs font-semibold flex items-center justify-center gap-3 transition-all shadow-sm hover:bg-[#FAF7F0]"
+                disabled={isLoading}
+                aria-busy={isLoading}
+                className="w-full py-2.5 px-4 bg-white border border-[#B8BCC2] disabled:opacity-60 disabled:cursor-wait hover:border-[#183D2B] text-[#292B29] rounded-xl text-xs font-semibold flex items-center justify-center gap-3 transition-all shadow-sm hover:bg-[#FAF7F0]"
               >
                 {/* Official Google G Logo */}
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">

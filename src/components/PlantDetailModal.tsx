@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Plant } from '../types';
+import { Plant, UserProfile } from '../types';
+import { PlantComments } from './PlantComments';
 import { 
   X, 
   Heart, 
@@ -31,6 +32,8 @@ interface PlantDetailModalProps {
   onSelectPlant: (plant: Plant) => void;
   allPlants: Plant[];
   canFavorite?: boolean;
+  currentUser: UserProfile;
+  onRequireLogin: () => void;
 }
 
 export const PlantDetailModal: React.FC<PlantDetailModalProps> = ({
@@ -41,9 +44,12 @@ export const PlantDetailModal: React.FC<PlantDetailModalProps> = ({
   onSelectPlant,
   allPlants,
   canFavorite = true,
+  currentUser,
+  onRequireLogin,
 }) => {
   const [activeTab, setActiveTab] = useState<'botany' | 'belief' | 'care' | 'safety' | 'reference'>('botany');
   const [copied, setCopied] = useState(false);
+  const [showSourceData, setShowSourceData] = useState(false);
 
   if (!plant) return null;
 
@@ -553,11 +559,9 @@ export const PlantDetailModal: React.FC<PlantDetailModalProps> = ({
           {/* Complete imported CSV record: show every populated source field */}
           {plant.sourceData && Object.values(plant.sourceData).some((value) => String(value || '').trim()) && (
             <section className="border border-[#E7DECD] bg-white rounded-xl p-5 space-y-4">
-              <div>
-                <h3 className="text-base font-bold text-[#183D2B]">ข้อมูลทั้งหมดจากฐานข้อมูล CSV</h3>
-                <p className="text-xs text-[#7A746B] mt-1">แสดงข้อมูลทุกช่องที่มีข้อมูลอยู่ในไฟล์ต้นฉบับ พร้อมลิงก์และเครดิตที่แนบมา</p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h3 className="text-base font-bold text-[#183D2B]">ข้อมูลทั้งหมดจากฐานข้อมูล CSV</h3><p className="text-xs text-[#7A746B] mt-1">แสดงข้อมูลต้นฉบับเป็นหมวดหมู่ เลือกเปิดดูเมื่อจำเป็นได้</p></div><div className="flex flex-wrap gap-2">{(['CSV','JSON','Excel','TXT'] as const).map(format => <button key={format} type="button" onClick={() => { const data = plant.sourceData || {}; const base = `SACRED-CANOPY-${plant.plantId}`; let blob: Blob; let name = base; if (format === 'JSON') { blob = new Blob([JSON.stringify({plantId:plant.plantId,thaiName:plant.thaiName,sourceData:data},null,2)],{type:'application/json;charset=utf-8'}); name += '.json'; } else if (format === 'CSV') { const rows = [['field','value'],...Object.entries(data)]; const csv = '\uFEFF' + rows.map(row => row.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(',')).join('\r\n'); blob = new Blob([csv],{type:'text/csv;charset=utf-8'}); name += '.csv'; } else if (format === 'Excel') { const html = `<table><tr><th>รายการ</th><th>ข้อมูล</th></tr>${Object.entries(data).map(([k,v])=>`<tr><td>${String(k).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</td><td>${String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</td></tr>`).join('')}</table>`; blob = new Blob(['\ufeff',html],{type:'application/vnd.ms-excel;charset=utf-8'}); name += '.xls'; } else { blob = new Blob([Object.entries(data).map(([k,v])=>`${k}: ${v}`).join('\n')],{type:'text/plain;charset=utf-8'}); name += '.txt'; } const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download=name; a.click(); URL.revokeObjectURL(url); }} className="rounded-lg border border-[#C6A96B]/60 bg-[#FAF7F0] px-2.5 py-1.5 text-[10px] font-bold text-[#183D2B]">ส่งออก {format}</button>)}</div></div>
+              <button type="button" aria-expanded={showSourceData} onClick={() => setShowSourceData(v => !v)} className="flex w-full items-center justify-between rounded-xl border border-[#E7DECD] bg-[#FAF7F0] px-4 py-3 text-left text-xs font-bold text-[#183D2B]"><span>{showSourceData ? 'ซ่อนรายละเอียดข้อมูลต้นฉบับ' : `เปิดดูข้อมูลต้นฉบับ (${Object.entries(plant.sourceData).filter(([key,value]) => key !== 'ลิงก์รูปภาพ (URL)' && String(value || '').trim()).length} ช่อง)`}</span><span>{showSourceData ? '−' : '+'}</span></button>
+              {showSourceData && <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 {Object.entries(plant.sourceData).filter(([key, value]) => key !== 'ลิงก์รูปภาพ (URL)' && String(value || '').trim()).map(([key, value]) => (
                   <div key={key} className="min-w-0">
                     <div className="text-[11px] font-bold text-[#A48545] mb-1">{key}</div>
@@ -570,9 +574,11 @@ export const PlantDetailModal: React.FC<PlantDetailModalProps> = ({
                     <a href={plant.sourceData['ลิงก์รูปภาพ (URL)']} target="_blank" rel="noreferrer" className="text-sm text-blue-700 underline break-all">เปิดภาพต้นฉบับ</a>
                   </div>
                 )}
-              </div>
+              </div>}
             </section>
           )}
+
+          <PlantComments plantId={plant.plantId} user={currentUser} onRequireLogin={onRequireLogin} />
 
           {/* Related Plants Recommendation */}
           {relatedPlants.length > 0 && (

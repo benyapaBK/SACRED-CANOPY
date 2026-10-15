@@ -33,7 +33,7 @@ export const SiteAudio: React.FC<{ page: string }> = ({ page }) => {
   if (excluded) return <audio ref={audioRef} src="/audio/SousdBG-greenweb.mp3" preload="none" loop />;
   return <>
     <audio ref={audioRef} src="/audio/SousdBG-greenweb.mp3" preload="none" loop />
-    <div aria-label="ควบคุมเสียงพื้นหลัง" className="fixed z-40 flex items-center gap-2 rounded-full border border-[#C6A96B]/25 bg-[#183D2B]/55 px-2.5 py-1.5 text-[#FAF7F0]/85 shadow-sm backdrop-blur-md opacity-65 transition-opacity hover:opacity-100 focus-within:opacity-100" style={{ right: 'clamp(18px, 3vw, 34px)', bottom: '8px' }}>
+    <div aria-label="ควบคุมเสียงพื้นหลัง" className="fixed z-30 flex items-center gap-2 rounded-full border border-[#C6A96B]/25 bg-[#183D2B]/55 px-2.5 py-1.5 text-[#FAF7F0]/85 shadow-sm backdrop-blur-md opacity-65 transition-opacity hover:opacity-100 focus-within:opacity-100" style={{ right: 'clamp(18px, 3vw, 34px)', bottom: '8px' }}>
       <button type="button" onClick={toggle} aria-label={enabled ? 'หยุดเสียงเพลง' : 'เล่นเสียงเพลงต่อ'} title={enabled ? 'หยุดเสียงเพลง' : 'เล่นเสียงเพลงต่อ'} className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-white/10">
         {enabled ? <Pause className="h-3.5 w-3.5 text-[#DFC488]" /> : <Play className="h-3.5 w-3.5 text-[#DFC488]" />}
       </button>

@@ -23,8 +23,22 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({
   onOpenAuthModal,
 }) => {
   const [searchFav, setSearchFav] = useState('');
+  const [selectedExportIds, setSelectedExportIds] = useState<string[]>([]);
 
   const favoritePlants = plants.filter((p) => favorites.includes(p.plantId));
+
+
+  const exportFavorites = (format: 'CSV' | 'JSON' | 'Excel' | 'TXT') => {
+    const rows = favoritePlants.filter(plant => selectedExportIds.includes(plant.plantId));
+    if (!rows.length) { window.alert('กรุณาติ๊กรายการต้นไม้ที่ต้องการส่งออกก่อนครับ'); return; }
+    let blob: Blob; let filename = 'SACRED-CANOPY-FAVORITES';
+    const data = rows.map(p => ({ รหัสพรรณไม้:p.plantId, ชื่อไทย:p.thaiName, ชื่อวิทยาศาสตร์:p.scientificName, วงศ์:p.family, หมวดหมู่:p.categoryId, แหล่งอ้างอิง:p.sourceData || {} }));
+    if (format === 'JSON') { blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json;charset=utf-8'}); filename += '.json'; }
+    else if (format === 'CSV') { const keys = ['รหัสพรรณไม้','ชื่อไทย','ชื่อวิทยาศาสตร์','วงศ์','หมวดหมู่']; const csv = '\uFEFF' + [keys, ...data.map(d => keys.map(k => (d as any)[k]))].map(row => row.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(',')).join('\r\n'); blob = new Blob([csv],{type:'text/csv;charset=utf-8'}); filename += '.csv'; }
+    else if (format === 'Excel') { const html = `<table><tr><th>รหัสพรรณไม้</th><th>ชื่อไทย</th><th>ชื่อวิทยาศาสตร์</th><th>วงศ์</th><th>หมวดหมู่</th></tr>${data.map(d=>`<tr><td>${d.รหัสพรรณไม้}</td><td>${d.ชื่อไทย}</td><td>${d.ชื่อวิทยาศาสตร์}</td><td>${d.วงศ์}</td><td>${d.หมวดหมู่}</td></tr>`).join('')}</table>`; blob = new Blob(['\ufeff',html],{type:'application/vnd.ms-excel;charset=utf-8'}); filename += '.xls'; }
+    else { blob = new Blob([data.map(d => `${d.รหัสพรรณไม้} | ${d.ชื่อไทย} | ${d.ชื่อวิทยาศาสตร์} | ${d.วงศ์}`).join('\n')],{type:'text/plain;charset=utf-8'}); filename += '.txt'; }
+    const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href=url; link.download=filename; link.click(); URL.revokeObjectURL(url);
+  };
 
   const filtered = favoritePlants.filter((p) => {
     if (!searchFav.trim()) return true;
@@ -80,6 +94,8 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({
         </div>
       )}
 
+      {favoritePlants.length > 0 && <section className="rounded-2xl border border-[#C6A96B]/40 bg-white p-4 space-y-3"><div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-sm font-bold text-[#183D2B]">ส่งออกรายการที่เลือก</h2><p className="text-xs text-[#7A746B] mt-1">ติ๊กเลือกต้นไม้จากรายการด้านล่าง แล้วส่งออกเฉพาะรายการที่เลือก หรือเลือกทั้งหมด</p></div><button onClick={() => setSelectedExportIds(selectedExportIds.length === favoritePlants.length ? [] : favoritePlants.map(p=>p.plantId))} className="rounded-lg border border-[#E5DCCB] px-3 py-2 text-xs">{selectedExportIds.length === favoritePlants.length ? 'ยกเลิกเลือกทั้งหมด' : 'เลือกทั้งหมด'}</button></div><div className="flex flex-wrap gap-2">{(['CSV','JSON','Excel','TXT'] as const).map(format=><button key={format} onClick={()=>exportFavorites(format)} className="rounded-lg bg-[#183D2B] px-3 py-2 text-xs font-semibold text-white">ส่งออก {format} ({selectedExportIds.length})</button>)}</div></section>}
+
       {/* Search within Favorites */}
       {favoritePlants.length > 0 && (
         <div className="relative max-w-md">
@@ -121,13 +137,13 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {filtered.map((plant) => (
-            <PlantCard
+            <div key={plant.plantId} className="relative"><label className="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-lg bg-white/95 px-2 py-1 text-[10px] font-bold text-[#183D2B] shadow"><input type="checkbox" checked={selectedExportIds.includes(plant.plantId)} onChange={e => setSelectedExportIds(old => e.target.checked ? [...old,plant.plantId] : old.filter(id=>id!==plant.plantId))}/>เลือกส่งออก</label><PlantCard
               key={plant.plantId}
               plant={plant}
               isFavorite={true}
               onToggleFavorite={onToggleFavorite}
               onSelectPlant={onSelectPlant}
-            />
+            /></div>
           ))}
         </div>
       )}

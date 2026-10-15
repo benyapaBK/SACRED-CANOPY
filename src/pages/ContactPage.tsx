@@ -41,6 +41,28 @@ export const ContactPage: React.FC<{ currentUser: UserProfile }> = ({ currentUse
   const [creatorLoading, setCreatorLoading] = useState(false);
   const [shareFeedback, setShareFeedback] = useState('');
 
+  const shareSite = async () => {
+    const url = window.location.origin;
+    try {
+      if (navigator.share) await navigator.share({ title: 'SACRED CANOPY', text: 'คลังความรู้พรรณไม้มงคลไทย', url });
+      else {
+        await navigator.clipboard.writeText(url);
+        setShareFeedback('คัดลอกลิงก์เว็บไซต์แล้วครับ 🌱 ' + url);
+      }
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') setShareFeedback('แชร์ไม่สำเร็จ ลองคัดลอกลิงก์แทนได้ครับ');
+    }
+  };
+  const copySiteLink = async () => {
+    const url = window.location.origin;
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareFeedback('น้องต้นกล้าฝากลิงก์ไว้แล้วครับ 🌱 ' + url);
+    } catch {
+      setShareFeedback('คัดลอกไม่ได้ในเบราว์เซอร์นี้ กรุณาคัดลอกลิงก์: ' + url);
+    }
+  };
+
   useEffect(() => {
     let active = true;
     getDoc(doc(db, 'siteSettings', 'contactCreators')).then((snapshot) => {
@@ -390,12 +412,16 @@ export const ContactPage: React.FC<{ currentUser: UserProfile }> = ({ currentUse
         </div>
       </div>
 
-      {/* Share website / QR */}
-      <section className="rounded-2xl border border-[#C6A96B]/35 bg-white p-5 sm:p-7 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] items-center gap-6">
-          <div className="space-y-2"><p className="text-[10px] uppercase tracking-[0.18em] text-[#A48545] font-bold">แบ่งปันองค์ความรู้</p><h2 className="text-xl sm:text-2xl font-display font-bold text-[#183D2B]">ชวนคนรักต้นไม้มารู้จัก SACRED CANOPY</h2><p className="text-xs leading-relaxed text-[#7A746B]">สแกน QR Code เพื่อเปิดเว็บไซต์ หรือคัดลอกลิงก์ส่งต่อให้เพื่อนและชุมชนของคุณ</p><div className="flex flex-wrap gap-2 pt-2"><button onClick={async()=>{try{await navigator.clipboard.writeText(window.location.origin);setShareFeedback('คัดลอกลิงก์เว็บไซต์แล้ว 🌱');}catch{setShareFeedback(`ลิงก์เว็บไซต์: ${window.location.origin}`);}}} className="inline-flex items-center gap-2 rounded-lg bg-[#183D2B] px-4 py-2.5 text-xs font-bold text-white"><Copy className="w-4 h-4 text-[#C6A96B]"/>คัดลอกลิงก์</button><button onClick={async()=>{const shareData={title:'SACRED CANOPY',text:'คลังสารสนเทศและพฤกษศาสตร์ไม้มงคลไทย 🌱',url:window.location.origin};try{if(navigator.share) await navigator.share(shareData);else {await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);setShareFeedback('คัดลอกข้อความสำหรับแชร์แล้ว 🌱');}}catch{setShareFeedback('คุณสามารถคัดลอกลิงก์เว็บไซต์เพื่อแชร์ได้');}}} className="inline-flex items-center gap-2 rounded-lg border border-[#C6A96B]/60 px-4 py-2.5 text-xs font-bold text-[#183D2B]"><Share2 className="w-4 h-4 text-[#A48545]"/>แชร์เว็บไซต์</button></div>{shareFeedback && <p role="status" className="text-xs text-[#2E7D32] pt-1">{shareFeedback}</p>}</div>
-          <div className="flex items-center justify-center gap-3 rounded-2xl bg-[#F7F4EB] p-4 border border-[#EEE7DA]"><div className="rounded-xl bg-white p-2 border border-[#C6A96B]/40"><img width="144" height="144" loading="lazy" alt="QR Code สำหรับเปิดเว็บไซต์ SACRED CANOPY" src={`https://api.qrserver.com/v1/create-qr-code/?size=144x144&margin=8&color=183D2B&bgcolor=FAF7F0&data=${encodeURIComponent(typeof window !== 'undefined' ? window.location.origin : 'https://sacred-canopy-99.web.app')}`} /></div><div className="hidden sm:block max-w-24 text-center"><QrCode className="w-7 h-7 mx-auto text-[#A48545]"/><p className="text-[10px] text-[#7A746B] mt-2">สแกนเพื่อเข้าชม</p><p className="text-[10px] font-bold text-[#183D2B]">SACRED CANOPY</p></div></div>
+      {/* Share and QR panel */}
+      <section className="mt-10 grid grid-cols-1 items-center gap-5 rounded-2xl border border-[#C6A96B]/40 bg-white p-5 shadow-sm sm:grid-cols-[1fr_auto] sm:p-7">
+        <div className="flex items-start gap-4">
+          <img src="/mascot/04_tonkla_present_knowledge.png" alt="น้องต้นกล้าแนะนำเว็บไซต์" className="h-24 w-24 shrink-0 object-contain sm:h-32 sm:w-32" style={{ transform: 'scaleX(-1)' }}/>
+          <div className="min-w-0"><span className="text-[10px] font-bold uppercase tracking-widest text-[#A48545]">SHARE SACRED CANOPY</span><h2 className="mt-1 text-xl font-bold text-[#183D2B]">ชวนเพื่อนมารู้จักไม้มงคลไทย</h2><p className="mt-2 text-sm leading-relaxed text-[#7A746B]">สแกน QR Code หรือแชร์ลิงก์เว็บไซต์ให้คนที่สนใจพรรณไม้ คติความเชื่อ และการดูแลต้นไม้ครับ</p><p className="mt-2 break-all rounded-lg bg-[#FAF7F0] p-2 text-xs text-[#49382C]">{typeof window !== 'undefined' ? window.location.origin : 'SACRED CANOPY'}</p>
+            <div className="mt-3 flex flex-wrap gap-2"><button onClick={() => void copySiteLink()} className="inline-flex items-center gap-1.5 rounded-lg bg-[#183D2B] px-3 py-2 text-xs font-bold text-white"><Copy className="h-3.5 w-3.5"/>คัดลอกลิงก์</button><button onClick={() => void shareSite()} className="inline-flex items-center gap-1.5 rounded-lg border border-[#C6A96B]/60 px-3 py-2 text-xs font-bold text-[#183D2B]"><Share2 className="h-3.5 w-3.5"/>แชร์เว็บไซต์</button></div>
+            {shareFeedback && <p role="status" className="mt-2 text-xs text-[#A48545]">{shareFeedback}</p>}
+          </div>
         </div>
+        <div className="mx-auto w-fit rounded-2xl border border-[#C6A96B]/50 bg-[#FAF7F0] p-3 text-center"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&color=183D2B&bgcolor=FAF7F0&data=${encodeURIComponent(typeof window !== 'undefined' ? window.location.origin : 'https://sacred-canopy-99.web.app')}`} alt="QR Code สำหรับเปิดเว็บไซต์ SACRED CANOPY" className="h-40 w-40 rounded-lg sm:h-44 sm:w-44"/><span className="mt-2 flex items-center justify-center gap-1 text-[10px] font-semibold text-[#A48545]"><QrCode className="h-3 w-3"/>สแกนเพื่อเข้าชมเว็บไซต์</span></div>
       </section>
 
       {/* Website creators / contact directory */}

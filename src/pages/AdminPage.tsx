@@ -94,6 +94,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   // --- Main Admin States ---
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
+  const [selectedGraphTypes, setSelectedGraphTypes] = useState<string[]>(['plants', 'categories', 'articles', 'users', 'contributors', 'messages']);
+  const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'plants' | 'import' | 'categories' | 'articles' | 'faqs' | 'users' | 'messages' | 'logs'>('overview');
   
   // Plants Table States
@@ -518,32 +520,26 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         </div>
       </div>
 
-      {/* Main Navigation Tabs */}
-      <div className="flex border-b border-[#EEE7DA] overflow-x-auto gap-4">
+      {/* Main Navigation Tabs — compact botanical command cards */}
+      <nav aria-label="เมนูควบคุมระบบแอดมิน" className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2 rounded-2xl border border-[#E9E0CF] bg-[#F4F0E7] p-2.5 shadow-inner">
         {[
-          { id: 'overview', label: '1. ภาพรวมระบบ (Overview)' },
-          { id: 'plants', label: `2. จัดการพรรณไม้ (${activePlants.length})` },
-          { id: 'import', label: '3. ศูนย์นำเข้าไฟล์ (File Import)' },
-          { id: 'categories', label: `4. หมวดหมู่ (${categories.length})` },
-          { id: 'articles', label: `5. บทความ (${articles.length})` },
-          { id: 'faqs', label: `6. FAQ (${faqs.length})` },
-          { id: 'users', label: `7. สมาชิกและสิทธิ์ (${registeredUsers.length})` },
-          { id: 'messages', label: `8. ข้อความ (${pendingMessages.length})` },
-          { id: 'logs', label: '9. Audit Logs' },
+          { id: 'overview', label: 'ภาพรวมระบบ', sub: 'Overview', count: null, icon: '✦' },
+          { id: 'plants', label: 'จัดการพรรณไม้', sub: 'Plant library', count: activePlants.length, icon: '❧' },
+          { id: 'import', label: 'ศูนย์นำเข้าไฟล์', sub: 'Import center', count: null, icon: '⇧' },
+          { id: 'categories', label: 'หมวดหมู่', sub: 'Categories', count: categories.length, icon: '◈' },
+          { id: 'articles', label: 'บทความ', sub: 'Articles', count: articles.length, icon: '▤' },
+          { id: 'faqs', label: 'คำถามที่พบบ่อย', sub: 'FAQ & notices', count: faqs.length, icon: '?' },
+          { id: 'users', label: 'สมาชิกและสิทธิ์', sub: 'Members', count: registeredUsers.length, icon: '♙' },
+          { id: 'messages', label: 'ข้อความติดต่อ', sub: 'Inbox', count: pendingMessages.length, icon: '✉' },
+          { id: 'logs', label: 'Audit Logs', sub: 'Activity trail', count: null, icon: '⌁' },
         ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`py-3 px-1 text-xs font-bold whitespace-nowrap border-b-2 transition-colors ${
-              activeTab === tab.id
-                ? 'border-[#183D2B] text-[#183D2B]'
-                : 'border-transparent text-[#7A746B] hover:text-[#183D2B]'
-            }`}
-          >
-            {tab.label}
+          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} aria-current={activeTab === tab.id ? 'page' : undefined}
+            className={`group min-h-[72px] rounded-xl border px-3 py-2.5 text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C6A96B]/60 ${activeTab === tab.id ? 'border-[#183D2B] bg-[#183D2B] text-[#FAF7F0] shadow-md -translate-y-0.5' : 'border-white/80 bg-white/80 text-[#49382C] hover:-translate-y-0.5 hover:border-[#C6A96B]/60 hover:bg-white hover:shadow-sm'}`}>
+            <span className="flex items-center justify-between gap-2"><span className={`flex h-7 w-7 items-center justify-center rounded-lg text-base ${activeTab === tab.id ? 'bg-white/10 text-[#DFC488]' : 'bg-[#F3EFE5] text-[#9A7B3F]'}`}>{tab.icon}</span>{tab.count !== null && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${activeTab === tab.id ? 'bg-white/10 text-[#DFC488]' : 'bg-[#F3EFE5] text-[#7A746B]'}`}>{tab.count}</span>}</span>
+            <span className="mt-2 block text-xs font-bold leading-tight">{tab.label}</span><span className={`mt-0.5 block text-[9px] tracking-wide ${activeTab === tab.id ? 'text-white/60' : 'text-[#9A9184]'}`}>{tab.sub}</span>
           </button>
         ))}
-      </div>
+      </nav>
 
       {/* 1. Overview Tab */}
       {activeTab === 'overview' && (
@@ -592,7 +588,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             </section>
             <section className="rounded-2xl border border-[#EEE7DA] bg-white p-5 shadow-sm space-y-3">
               <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-bold text-[#183D2B]">Knowledge Graph · ความสัมพันธ์ข้อมูล</h3><button onClick={() => setShowKnowledgeGraph(true)} className="rounded-lg bg-[#183D2B] px-3 py-2 text-[11px] font-bold text-white">เปิดกราฟเต็ม</button></div>
-              <p className="text-[11px] text-[#7A746B]">แผนภาพเชิงแนวคิดของส่วนประกอบหลักในเว็บไซต์</p>
+              <p className="text-[11px] text-[#7A746B]">คลิกเปิดกราฟเพื่อสำรวจความเชื่อมโยงจากข้อมูลพรรณไม้ หมวดหมู่ บทความ สมาชิก และผู้ลงข้อมูลจริง</p>
               <svg viewBox="0 0 300 190" className="w-full max-h-48" role="img" aria-label="แผนภาพความสัมพันธ์พรรณไม้ หมวดหมู่ บทความ สมาชิก และรายการโปรด">
                 <g stroke="#C6A96B" strokeWidth="2" opacity=".8"><line x1="150" y1="92" x2="68" y2="38"/><line x1="150" y1="92" x2="232" y2="38"/><line x1="150" y1="92" x2="62" y2="145"/><line x1="150" y1="92" x2="238" y2="145"/><line x1="68" y1="38" x2="232" y2="38"/></g>
                 {[{x:150,y:92,w:90,h:38,label:'พรรณไม้',fill:'#183D2B'},{x:68,y:38,w:76,h:32,label:'หมวดหมู่',fill:'#497A5B'},{x:232,y:38,w:76,h:32,label:'บทความ',fill:'#497A5B'},{x:62,y:145,w:82,h:32,label:'สมาชิก',fill:'#9A7B3F'},{x:238,y:145,w:82,h:32,label:'รายการโปรด',fill:'#9A7B3F'}].map((n) => <g key={n.label}><rect x={n.x-n.w/2} y={n.y-n.h/2} width={n.w} height={n.h} rx="10" fill={n.fill}/><text x={n.x} y={n.y+4} fill="white" fontSize="10" textAnchor="middle">{n.label}</text></g>)}
@@ -619,7 +615,91 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             </div>
           </section>
 
-          {showKnowledgeGraph && <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label="Knowledge Graph"><div className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl border border-[#C6A96B]/50 bg-[#FAF7F0] p-5 shadow-2xl"><div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-widest text-[#A48545]">SACRED CANOPY · BLOOM'S KNOWLEDGE GRAPH</p><h3 className="mt-1 text-xl font-bold text-[#183D2B]">กราฟความสัมพันธ์สารสนเทศ</h3></div><button onClick={() => setShowKnowledgeGraph(false)} aria-label="ปิดกราฟ" className="rounded-full border p-2 hover:bg-white"><X className="h-5 w-5"/></button></div><p className="mt-2 text-xs text-[#7A746B]">ภาพนี้เป็นกราฟเชิงแนวคิดของความสัมพันธ์ระหว่างพรรณไม้ หมวดหมู่ บทความ สมาชิก และรายการโปรด</p><svg viewBox="0 0 720 420" className="mt-4 w-full rounded-xl border bg-white p-3"><g stroke="#C6A96B" strokeWidth="3" opacity=".8"><line x1="360" y1="200" x2="145" y2="90"/><line x1="360" y1="200" x2="570" y2="90"/><line x1="360" y1="200" x2="145" y2="320"/><line x1="360" y1="200" x2="570" y2="320"/><line x1="145" y1="90" x2="570" y2="90"/><line x1="145" y1="320" x2="570" y2="320"/></g>{[{x:360,y:200,w:150,h:64,t:'พรรณไม้',s:`${plants.length} รายการ`,c:'#183D2B'},{x:145,y:90,w:150,h:58,t:'หมวดหมู่',s:`${categories.length} หมวด`,c:'#497A5B'},{x:570,y:90,w:150,h:58,t:'บทความ',s:`${articles.length} เรื่อง`,c:'#497A5B'},{x:145,y:320,w:150,h:58,t:'สมาชิก',s:`${registeredUsers.length} บัญชี`,c:'#A48545'},{x:570,y:320,w:150,h:58,t:'ข้อความติดต่อ',s:`${contactMessages.length} ข้อความ`,c:'#A48545'}].map(n=><g key={n.t}><rect x={n.x-n.w/2} y={n.y-n.h/2} width={n.w} height={n.h} rx="15" fill={n.c}/><text x={n.x} y={n.y-2} textAnchor="middle" fill="white" fontSize="16" fontWeight="bold">{n.t}</text><text x={n.x} y={n.y+18} textAnchor="middle" fill="white" fontSize="12">{n.s}</text></g>)}</svg><div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">{[{t:'พรรณไม้ → หมวดหมู่',d:'พรรณไม้แต่ละรายการสังกัดหมวด A–H'},{t:'พรรณไม้ → บทความ',d:'บทความให้ความรู้และการดูแลเชื่อมโยงกับพรรณไม้'},{t:'สมาชิก → รายการโปรด',d:'สมาชิกบันทึกพรรณไม้ที่สนใจไว้ในบัญชี'},{t:'ผู้ใช้งาน → ข้อความติดต่อ',d:'ข้อความจากผู้ใช้ถูกจัดการในระบบแอดมิน'}].map(x=><div key={x.t} className="rounded-lg border bg-white p-3"><strong className="text-[#183D2B]">{x.t}</strong><p className="mt-1 text-[#7A746B]">{x.d}</p></div>)}</div><div className="mt-4 flex justify-end"><button onClick={() => setShowKnowledgeGraph(false)} className="rounded-lg bg-[#183D2B] px-5 py-2 text-xs font-bold text-white">ปิดหน้าต่าง</button></div></div></div>}
+          {showKnowledgeGraph && (() => {
+            type GraphType = 'plants' | 'categories' | 'articles' | 'users' | 'contributors' | 'messages';
+            type GraphNode = { id: string; type: GraphType; label: string; detail: string; color: string; meta?: string };
+            type GraphEdge = { from: string; to: string; label: string };
+            const nodes: GraphNode[] = [];
+            const edges: GraphEdge[] = [];
+            const plantLimit = activePlants.slice(0, 80);
+            const articleLimit = articles.slice(0, 35);
+            const userLimit = registeredUsers.filter((u) => u.role !== 'guest').slice(0, 35);
+            const messageLimit = contactMessages.slice(0, 20);
+            const creatorIds = new Map<string, string>();
+            const addCreator = (name?: string, email?: string, uid?: string) => {
+              const matchedUser = userLimit.find(u => (uid && u.uid === uid) || (email && u.email.toLowerCase() === email.toLowerCase()) || (name && u.displayName.toLowerCase() === name.toLowerCase()));
+              if (matchedUser) return `user:${matchedUser.uid}`;
+              const cleanName = (name || email || 'ไม่ระบุผู้ลงข้อมูล').trim();
+              const key = (email || cleanName).toLowerCase();
+              const id = creatorIds.get(key) || `creator:${key}`;
+              if (!creatorIds.has(key)) {
+                creatorIds.set(key, id);
+                nodes.push({ id, type: 'contributors', label: cleanName.slice(0, 30), detail: `ผู้ลงข้อมูล: ${cleanName}${email ? `\nอีเมล: ${email}` : ''}${uid ? `\nUID: ${uid}` : ''}`, color: '#98783D', meta: email || 'Contributor' });
+              }
+              return id;
+            };
+            categories.forEach(c => nodes.push({ id: `category:${c.categoryId}`, type: 'categories', label: c.name, detail: `${c.name} (${c.prefix})\n${c.description || ''}`, color: '#477A59', meta: c.prefix }));
+            plantLimit.forEach(p => {
+              nodes.push({ id: `plant:${p.plantId}`, type: 'plants', label: p.thaiName, detail: `${p.thaiName} (${p.scientificName})\nรหัส: ${p.plantId}\nหมวด: ${p.categoryId}\nผู้ลงข้อมูล: ${p.createdByName || p.createdByEmail || 'ไม่ระบุ'}\nอีเมลผู้ลงข้อมูล: ${p.createdByEmail || 'ไม่ระบุ'}\nสถานะ: ${p.status}`, color: '#183D2B', meta: p.plantId });
+              if (categories.some(c => c.categoryId === p.categoryId)) edges.push({ from: `plant:${p.plantId}`, to: `category:${p.categoryId}`, label: 'อยู่ในหมวด' });
+              if (p.createdBy || p.createdByEmail || p.createdByName) edges.push({ from: `plant:${p.plantId}`, to: addCreator(p.createdByName, p.createdByEmail, p.createdBy), label: 'เพิ่มโดย' });
+            });
+            articleLimit.forEach(a => {
+              nodes.push({ id: `article:${a.articleId}`, type: 'articles', label: a.title, detail: `${a.title}\nหมวดบทความ: ${a.category}\nผู้เขียน: ${a.author}\nสถานะ: ${a.status}${a.referenceUrl ? `\nอ้างอิง: ${a.referenceUrl}` : ''}`, color: '#A48545', meta: a.category });
+              const authorId = addCreator(a.author);
+              if (authorId) edges.push({ from: `article:${a.articleId}`, to: authorId, label: 'เขียนโดย' });
+              const content = `${a.title} ${a.excerpt} ${a.content}`.toLowerCase();
+              plantLimit.filter(p => content.includes(p.thaiName.toLowerCase()) || (p.scientificName && content.includes(p.scientificName.toLowerCase()))).slice(0, 4).forEach(p => edges.push({ from: `article:${a.articleId}`, to: `plant:${p.plantId}`, label: 'กล่าวถึง' }));
+            });
+            userLimit.forEach(u => nodes.push({ id: `user:${u.uid}`, type: 'users', label: u.displayName || u.email, detail: `${u.displayName || 'ไม่ระบุชื่อ'}\nอีเมล: ${u.email}\nบทบาท: ${u.role === 'admin' ? 'Admin' : 'Member'}\nสมัครเมื่อ: ${u.createdAt || 'ไม่ระบุ'}\nรายการโปรด: ${(u.favorites || []).length}`, color: u.role === 'admin' ? '#B68B37' : '#5797B9', meta: u.role }));
+            userLimit.forEach(u => (u.favorites || []).forEach(pid => { if (plantLimit.some(p => p.plantId === pid)) edges.push({ from: `user:${u.uid}`, to: `plant:${pid}`, label: 'บันทึกโปรด' }); }));
+            messageLimit.forEach(m => {
+              nodes.push({ id: `message:${m.messageId}`, type: 'messages', label: (m.subject || m.name || 'ข้อความ').slice(0, 26), detail: `หัวข้อ: ${m.subject}\nผู้ส่ง: ${m.name}\nอีเมล: ${m.email}\nสถานะ: ${m.status}\nส่งเมื่อ: ${m.createdAt}`, color: '#8D6C83', meta: m.status });
+              const sender = userLimit.find(u => u.email.toLowerCase() === m.email.toLowerCase());
+              if (sender) edges.push({ from: `message:${m.messageId}`, to: `user:${sender.uid}`, label: 'ส่งโดยสมาชิก' });
+            });
+            const visibleNodes = nodes.filter(n => selectedGraphTypes.includes(n.type));
+            const visibleIds = new Set(visibleNodes.map(n => n.id));
+            const visibleEdges = edges.filter(e => visibleIds.has(e.from) && visibleIds.has(e.to));
+            const positions = new Map(visibleNodes.map((n, i) => {
+              const angle = (Math.PI * 2 * i) / Math.max(visibleNodes.length, 1) - Math.PI / 2;
+              const radius = Math.min(270, 70 + visibleNodes.length * 2.1);
+              return [n.id, { x: 500 + Math.cos(angle) * radius, y: 325 + Math.sin(angle) * radius * 0.72 }];
+            }));
+            const selectedNode = visibleNodes.find(n => n.id === selectedGraphNodeId);
+            const filterOptions: { id: GraphType; label: string }[] = [
+              { id: 'plants', label: 'พรรณไม้' }, { id: 'categories', label: 'หมวดหมู่' }, { id: 'articles', label: 'บทความ' },
+              { id: 'users', label: 'สมาชิก' }, { id: 'contributors', label: 'ผู้ลงข้อมูล/ผู้เขียน' }, { id: 'messages', label: 'ข้อความติดต่อ' },
+            ];
+            return <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#07170F]/70 backdrop-blur-sm p-2 sm:p-5" role="dialog" aria-modal="true" aria-label="Knowledge Graph">
+              <div className="flex max-h-[96vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-[#C6A96B]/45 bg-[#FAF7F0] shadow-2xl">
+                <div className="flex items-start justify-between gap-3 border-b border-[#E8DECA] bg-white/80 px-4 py-3 sm:px-6">
+                  <div className="flex items-center gap-3"><img src="/mascot/04_tonkla_present_knowledge.png" alt="น้องต้นกล้านำเสนอความรู้" className="hidden sm:block h-14 w-14 object-contain"/><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A48545]">SACRED CANOPY · BLOOM / KNOWLEDGE GRAPH</p><h3 className="mt-1 text-lg sm:text-xl font-bold text-[#183D2B]">กราฟความสัมพันธ์จากข้อมูลจริงในคลังเว็บไซต์</h3><p className="mt-1 text-[11px] text-[#7A746B]">เลือกชนิดข้อมูล แล้วคลิกโหนดเพื่อดูรายละเอียดและความสัมพันธ์ คล้ายการสำรวจกราฟใน Neo4j</p></div></div>
+                  <button onClick={() => { setShowKnowledgeGraph(false); setSelectedGraphNodeId(null); }} aria-label="ปิดกราฟ" title="ปิดหน้าต่างกราฟ" className="shrink-0 rounded-full border border-[#E8DECA] bg-white p-2 text-[#183D2B] transition hover:bg-[#F3EFE5]"><X className="h-5 w-5"/></button>
+                </div>
+                <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)_260px]">
+                  <aside className="border-b lg:border-b-0 lg:border-r border-[#E8DECA] p-3 sm:p-4">
+                    <div className="text-xs font-bold text-[#183D2B]">เลือกข้อมูลที่ต้องการดู</div><div className="mt-3 space-y-2">{filterOptions.map(option => <label key={option.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#E8DECA] bg-white/70 px-2.5 py-2 text-[11px] text-[#49382C] hover:bg-white"><input type="checkbox" checked={selectedGraphTypes.includes(option.id)} onChange={e => { setSelectedGraphTypes(old => e.target.checked ? [...old, option.id] : old.filter(t => t !== option.id)); setSelectedGraphNodeId(null); }} className="accent-[#183D2B]"/><span>{option.label}</span></label>)}</div>
+                    <div className="mt-4 rounded-xl bg-[#183D2B] p-3 text-[#FAF7F0]"><div className="text-[10px] text-[#DFC488]">โหนดที่แสดง</div><div className="mt-1 text-2xl font-bold tabular-nums">{visibleNodes.length}</div><div className="mt-1 text-[10px] text-white/65">เส้นความสัมพันธ์ {visibleEdges.length} เส้น</div></div>
+                    <p className="mt-3 text-[10px] leading-relaxed text-[#7A746B]">หมายเหตุ: จำกัดการแสดงผลไว้ไม่เกิน 80 พรรณไม้, 35 บทความ, 35 สมาชิก และ 20 ข้อความ เพื่อให้กราฟอ่านง่าย</p>
+                  </aside>
+                  <div className="min-h-[300px] min-w-0 overflow-auto bg-[radial-gradient(circle_at_center,#FFFFFF_0%,#F5F1E8_100%)] p-2 sm:p-3">
+                    <svg viewBox="0 0 1000 650" className="h-full min-h-[380px] w-full rounded-xl" role="img" aria-label="กราฟโหนดและเส้นความสัมพันธ์ข้อมูลจริง">
+                      <defs><pattern id="kg-dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#D8D0BF" opacity=".55"/></pattern></defs><rect width="1000" height="650" fill="url(#kg-dots)"/>
+                      {visibleEdges.map((edge, i) => { const a = positions.get(edge.from); const b = positions.get(edge.to); if (!a || !b) return null; return <g key={`${edge.from}-${edge.to}-${i}`}><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#BBA36F" strokeWidth="1.5" opacity=".55"><title>{edge.label}</title></line></g>; })}
+                      {visibleNodes.map(node => { const pos = positions.get(node.id)!; const isSelected = selectedGraphNodeId === node.id; const label = node.label.length > 19 ? `${node.label.slice(0, 18)}…` : node.label; return <g key={node.id} role="button" tabIndex={0} aria-label={`เลือก ${node.label}`} onClick={() => setSelectedGraphNodeId(node.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setSelectedGraphNodeId(node.id); }} className="cursor-pointer"><circle cx={pos.x} cy={pos.y} r={isSelected ? 35 : 29} fill={node.color} opacity={isSelected ? 1 : .92} stroke={isSelected ? '#183D2B' : '#FFFFFF'} strokeWidth={isSelected ? 4 : 2}><title>{node.label} — {node.type}</title></circle><text x={pos.x} y={pos.y + 4} fill="white" fontSize="10" fontWeight="700" textAnchor="middle">{node.type === 'plants' ? '🌿' : node.type === 'categories' ? 'หมวด' : node.type === 'articles' ? 'บทความ' : node.type === 'users' ? 'สมาชิก' : node.type === 'contributors' ? 'ผู้เขียน' : 'ข้อความ'}</text><text x={pos.x} y={pos.y + 46} fill="#49382C" fontSize="11" fontWeight={isSelected ? '700' : '500'} textAnchor="middle">{label}</text></g>; })}
+                      {visibleNodes.length === 0 && <text x="500" y="320" fill="#7A746B" fontSize="18" textAnchor="middle">เลือกชนิดข้อมูลอย่างน้อยหนึ่งรายการ</text>}
+                    </svg>
+                  </div>
+                  <aside className="overflow-y-auto border-t lg:border-t-0 lg:border-l border-[#E8DECA] bg-white/60 p-3 sm:p-4">
+                    <div className="text-xs font-bold text-[#183D2B]">รายละเอียดโหนด</div>
+                    {selectedNode ? <><div className="mt-3 rounded-xl border border-[#E8DECA] bg-white p-3"><span className="rounded-full px-2 py-1 text-[9px] font-bold uppercase" style={{ backgroundColor: `${selectedNode.color}18`, color: selectedNode.color }}>{filterOptions.find(o => o.id === selectedNode.type)?.label || selectedNode.type}</span><h4 className="mt-3 break-words text-sm font-bold text-[#183D2B]">{selectedNode.label}</h4><p className="mt-2 whitespace-pre-line break-words text-[11px] leading-relaxed text-[#5E594F]">{selectedNode.detail}</p></div><div className="mt-3 text-[11px] font-bold text-[#183D2B]">ความสัมพันธ์ที่พบ</div><div className="mt-2 space-y-2">{visibleEdges.filter(e => e.from === selectedNode.id || e.to === selectedNode.id).map((edge, i) => { const otherId = edge.from === selectedNode.id ? edge.to : edge.from; const other = visibleNodes.find(n => n.id === otherId); return <button key={`${edge.from}-${edge.to}-${i}`} onClick={() => other && setSelectedGraphNodeId(other.id)} className="w-full rounded-lg border border-[#E8DECA] bg-white px-2.5 py-2 text-left hover:border-[#C6A96B]"><span className="block text-[10px] text-[#A48545]">{edge.label}</span><span className="mt-0.5 block text-[11px] font-semibold text-[#183D2B]">{other?.label || otherId}</span></button>; })}{visibleEdges.filter(e => e.from === selectedNode.id || e.to === selectedNode.id).length === 0 && <p className="text-[10px] text-[#7A746B]">ยังไม่มีความสัมพันธ์ที่เชื่อมกับโหนดนี้ในข้อมูลที่เลือก</p>}</div></> : <div className="mt-3 rounded-xl border border-dashed border-[#D8CBAF] p-4 text-[11px] leading-relaxed text-[#7A746B]">คลิกโหนดในกราฟเพื่อดูข้อมูล เช่น รหัสพรรณไม้ หมวดหมู่ ผู้ลงข้อมูล อีเมลผู้เขียน และรายการที่เชื่อมโยง</div>}
+                    <button onClick={() => { setShowKnowledgeGraph(false); setSelectedGraphNodeId(null); }} className="mt-4 w-full rounded-xl bg-[#183D2B] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#25523B]">ปิดหน้าต่างกราฟ</button>
+                  </aside>
+                </div>
+              </div>
+            </div>;
+          })()}
 
           {/* Quick Import Action Banner */}
           <div className="p-6 rounded-2xl bg-[#FAF7F0] border border-[#C6A96B]/40 flex flex-col sm:flex-row items-center justify-between gap-4">

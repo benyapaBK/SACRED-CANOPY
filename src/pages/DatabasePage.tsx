@@ -193,7 +193,7 @@ export const DatabasePage: React.FC<DatabasePageProps> = ({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-[#7A746B]">
-            <span>แสดง <span className="font-bold text-[#183D2B]">{sortedPlants.length}</span> จากทั้งหมด {plants.length} พรรณไม้</span>
+            <span>แสดง <span className="font-bold text-[#183D2B]">{sortedPlants.length}</span> จากทั้งหมด {plants.length} พันธุ์ไม้</span>
             {canExport && <button onClick={handleExport} className="px-3 py-2 rounded-lg border border-[#C6A96B]/60 text-[#183D2B] font-semibold hover:bg-white">ส่งออก CSV</button>}
           </div>
         </div>
@@ -237,9 +237,9 @@ export const DatabasePage: React.FC<DatabasePageProps> = ({
               onChange={(e) => setSortBy(e.target.value as any)}
               className="appearance-none bg-white border border-[#EEE7DA] rounded-xl px-4 py-2.5 pr-8 text-xs font-medium text-[#183D2B] shadow-sm focus:outline-none cursor-pointer"
             >
-              <option value="code">เรียงตามรหัสพรรณไม้ (A01...)</option>
-              <option value="nameAsc">ชื่อพรรณไม้ (ก - ฮ)</option>
-              <option value="nameDesc">ชื่อพรรณไม้ (ฮ - ก)</option>
+              <option value="code">เรียงตามรหัสพันธุ์ไม้ (A01...)</option>
+              <option value="nameAsc">ชื่อพันธุ์ไม้ (ก - ฮ)</option>
+              <option value="nameDesc">ชื่อพันธุ์ไม้ (ฮ - ก)</option>
               <option value="recent">บันทึกล่าสุด</option>
             </select>
             <ArrowUpDown className="w-3.5 h-3.5 text-[#7A746B] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -336,7 +336,7 @@ export const DatabasePage: React.FC<DatabasePageProps> = ({
 
             {/* Filter 1: Category */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-[#183D2B] block">หมวดหมู่ 8 พรรณไม้</label>
+              <label className="text-xs font-bold text-[#183D2B] block">หมวดหมู่ 8 พันธุ์ไม้</label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
@@ -425,7 +425,7 @@ export const DatabasePage: React.FC<DatabasePageProps> = ({
                   className="rounded text-[#183D2B] focus:ring-[#C6A96B]"
                 />
                 <span className="text-xs font-medium text-[#183D2B]">
-                  เฉพาะพรรณไม้ที่ปลอดภัยต่อสัตว์เลี้ยง 🐾
+                  เฉพาะพันธุ์ไม้ที่ปลอดภัยต่อสัตว์เลี้ยง 🐾
                 </span>
               </label>
             </div>
@@ -449,7 +449,7 @@ export const DatabasePage: React.FC<DatabasePageProps> = ({
                 <Search className="w-8 h-8" />
               </div>
               <h3 className="text-lg font-bold text-[#183D2B]">
-                ไม่พบพรรณไม้ที่ตรงกับเงื่อนไขการค้นหา
+                ไม่พบพันธุ์ไม้ที่ตรงกับเงื่อนไขการค้นหา
               </h3>
               <p className="text-xs text-[#7A746B] max-w-md mx-auto">
                 ลองลดหรือปรับเปลี่ยนคำค้นหา ปลดตัวกรองบางรายการ หรือค้นหาด้วยชื่ออื่น

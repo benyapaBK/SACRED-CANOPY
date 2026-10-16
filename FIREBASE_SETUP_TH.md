@@ -2,7 +2,7 @@
 
 ## สิ่งที่โปรเจกต์ใช้
 - Firebase Authentication: สมัคร/เข้าสู่ระบบด้วย Email/Password และ Google
-- Cloud Firestore: โปรไฟล์สมาชิก, ข้อมูลพรรณไม้/หมวดหมู่/บทความ/FAQ และข้อความติดต่อ
+- Cloud Firestore: โปรไฟล์สมาชิก, ข้อมูลพันธุ์ไม้/หมวดหมู่/บทความ/FAQ และข้อความติดต่อ
 - Firebase Hosting: เผยแพร่เว็บ
 - ไม่มีการใช้ Firebase Storage; ภาพหลักเก็บใน `public/images/` และภาพภายนอกใช้ HTTPS URL
 - สิทธิ์แอดมินตรวจจาก Firebase Authentication Custom Claim `admin: true` เท่านั้น ไม่เชื่อ `role` จาก localStorage หรือจากการสมัครสมาชิก
@@ -64,7 +64,7 @@ node scripts/set-admin.mjs "C:/secure/path/service-account.json" "admin@example.
 
 ## 6. ภาพโดยไม่ใช้ Storage
 - ไฟล์ภาพที่มากับเว็บ: วางใน `public/images/plants/` แล้วอ้างด้วย `/images/plants/ชื่อไฟล์.jpg`.
-- ภาพภายนอก: ใช้ `https://...` URL ในฟิลด์ภาพของข้อมูลพรรณไม้.
+- ภาพภายนอก: ใช้ `https://...` URL ในฟิลด์ภาพของข้อมูลพันธุ์ไม้.
 - ใช้เฉพาะภาพที่คุณมีสิทธิ์เผยแพร่. URL ภายนอกอาจหมดอายุหรือปิด hotlink ได้.
 
 ## ข้อควรทราบ
@@ -74,7 +74,7 @@ node scripts/set-admin.mjs "C:/secure/path/service-account.json" "admin@example.
 - ห้ามใช้กฎ Firestore แบบ `allow read, write: if true` ในระบบจริง.
 
 
-## ชุดข้อมูลพรรณไม้ CSV ที่แนบมา
+## ชุดข้อมูลพันธุ์ไม้ CSV ที่แนบมา
 
 โครงการรวมข้อมูลจาก `mongkol-mai-2026-10-14.csv` จำนวน 70 รายการ 57 คอลัมน์ไว้ใน `src/data/mongkol-mai-data.json` และแปลงเป็นข้อมูลที่ใช้แสดงผลผ่าน `src/data/csvPlants.ts` โดยเก็บคอลัมน์ต้นฉบับทั้งหมดใน `sourceData` เพื่อให้หน้าแสดงรายละเอียดสามารถเปิดอ่านข้อมูลทุกช่องที่มีค่าได้ ภาพใช้ URL จากคอลัมน์ `ลิงก์รูปภาพ (URL)` โดยตรง ไม่มีการอัปโหลดไป Firebase Storage
 
@@ -106,5 +106,5 @@ node scripts/set-admin.mjs "C:/secure/path/service-account.json" "admin@example.
 - เอกสาร `siteSettings/contactCreators` อ่านได้จากสาธารณะ แต่เขียนได้เฉพาะแอดมินตาม `firestore.rules`.
 
 ## ผู้ช่วยน้องต้นกล้า
-- ตอบคำถามจากข้อมูลพรรณไม้และ FAQ ที่โหลดอยู่ในเว็บไซต์ และแนะนำวิธีใช้งานให้ผู้เยี่ยมชม สมาชิก และแอดมินได้
+- ตอบคำถามจากข้อมูลพันธุ์ไม้และ FAQ ที่โหลดอยู่ในเว็บไซต์ และแนะนำวิธีใช้งานให้ผู้เยี่ยมชม สมาชิก และแอดมินได้
 - หากคำถามต้องใช้ข้อมูลล่าสุดจากอินเทอร์เน็ต จะแสดงลิงก์ค้นหาเว็บให้เปิดดู ไม่ได้เรียก AI หรือดึงเว็บแบบสดโดยตรง เพราะโปรเจกต์นี้ยังไม่ได้ตั้งค่า backend/API key สำหรับบริการค้นหา/AI ภายนอก

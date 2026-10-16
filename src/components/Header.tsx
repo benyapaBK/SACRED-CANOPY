@@ -76,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const navLinks = [
     { id: 'database' as NavigationPage, label: 'ฐานข้อมูลไม้มงคล' },
-    { id: 'categories' as NavigationPage, label: 'หมวดหมู่ 8 พรรณ' },
+    { id: 'categories' as NavigationPage, label: 'หมวดหมู่ 8 พันธุ์' },
     { id: 'beliefs' as NavigationPage, label: 'คติความเชื่อ' },
     { id: 'quiz' as NavigationPage, label: 'ค้นหาต้นไม้ Quiz' },
     { id: 'articles' as NavigationPage, label: 'เกร็ดความรู้' },
@@ -295,7 +295,7 @@ export const Header: React.FC<HeaderProps> = ({
                   className="w-full px-4 py-2.5 text-left text-xs text-[#FAF7F0] hover:bg-[#183D2B] flex items-center gap-2.5 transition-colors"
                 >
                   <User className="w-4 h-4 text-[#C6A96B]" />
-                  <span>ประวัติพรรณไม้ที่เข้าชม</span>
+                  <span>ประวัติพันธุ์ไม้ที่เข้าชม</span>
                 </button>
 
                 {currentUser.role === 'admin' && (

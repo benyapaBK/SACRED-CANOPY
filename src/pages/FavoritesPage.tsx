@@ -32,11 +32,11 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({
     const rows = favoritePlants.filter(plant => selectedExportIds.includes(plant.plantId));
     if (!rows.length) { window.alert('กรุณาติ๊กรายการต้นไม้ที่ต้องการส่งออกก่อนครับ'); return; }
     let blob: Blob; let filename = 'SACRED-CANOPY-FAVORITES';
-    const data = rows.map(p => ({ รหัสพรรณไม้:p.plantId, ชื่อไทย:p.thaiName, ชื่อวิทยาศาสตร์:p.scientificName, วงศ์:p.family, หมวดหมู่:p.categoryId, แหล่งอ้างอิง:p.sourceData || {} }));
+    const data = rows.map(p => ({ รหัสพันธุ์ไม้:p.plantId, ชื่อไทย:p.thaiName, ชื่อวิทยาศาสตร์:p.scientificName, วงศ์:p.family, หมวดหมู่:p.categoryId, แหล่งอ้างอิง:p.sourceData || {} }));
     if (format === 'JSON') { blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json;charset=utf-8'}); filename += '.json'; }
-    else if (format === 'CSV') { const keys = ['รหัสพรรณไม้','ชื่อไทย','ชื่อวิทยาศาสตร์','วงศ์','หมวดหมู่']; const csv = '\uFEFF' + [keys, ...data.map(d => keys.map(k => (d as any)[k]))].map(row => row.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(',')).join('\r\n'); blob = new Blob([csv],{type:'text/csv;charset=utf-8'}); filename += '.csv'; }
-    else if (format === 'Excel') { const html = `<table><tr><th>รหัสพรรณไม้</th><th>ชื่อไทย</th><th>ชื่อวิทยาศาสตร์</th><th>วงศ์</th><th>หมวดหมู่</th></tr>${data.map(d=>`<tr><td>${d.รหัสพรรณไม้}</td><td>${d.ชื่อไทย}</td><td>${d.ชื่อวิทยาศาสตร์}</td><td>${d.วงศ์}</td><td>${d.หมวดหมู่}</td></tr>`).join('')}</table>`; blob = new Blob(['\ufeff',html],{type:'application/vnd.ms-excel;charset=utf-8'}); filename += '.xls'; }
-    else { blob = new Blob([data.map(d => `${d.รหัสพรรณไม้} | ${d.ชื่อไทย} | ${d.ชื่อวิทยาศาสตร์} | ${d.วงศ์}`).join('\n')],{type:'text/plain;charset=utf-8'}); filename += '.txt'; }
+    else if (format === 'CSV') { const keys = ['รหัสพันธุ์ไม้','ชื่อไทย','ชื่อวิทยาศาสตร์','วงศ์','หมวดหมู่']; const csv = '\uFEFF' + [keys, ...data.map(d => keys.map(k => (d as any)[k]))].map(row => row.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(',')).join('\r\n'); blob = new Blob([csv],{type:'text/csv;charset=utf-8'}); filename += '.csv'; }
+    else if (format === 'Excel') { const html = `<table><tr><th>รหัสพันธุ์ไม้</th><th>ชื่อไทย</th><th>ชื่อวิทยาศาสตร์</th><th>วงศ์</th><th>หมวดหมู่</th></tr>${data.map(d=>`<tr><td>${d.รหัสพันธุ์ไม้}</td><td>${d.ชื่อไทย}</td><td>${d.ชื่อวิทยาศาสตร์}</td><td>${d.วงศ์}</td><td>${d.หมวดหมู่}</td></tr>`).join('')}</table>`; blob = new Blob(['\ufeff',html],{type:'application/vnd.ms-excel;charset=utf-8'}); filename += '.xls'; }
+    else { blob = new Blob([data.map(d => `${d.รหัสพันธุ์ไม้} | ${d.ชื่อไทย} | ${d.ชื่อวิทยาศาสตร์} | ${d.วงศ์}`).join('\n')],{type:'text/plain;charset=utf-8'}); filename += '.txt'; }
     const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href=url; link.download=filename; link.click(); URL.revokeObjectURL(url);
   };
 
@@ -66,7 +66,7 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({
               <Heart className="w-6 h-6 text-[#C6A96B] fill-[#C6A96B]" />
             </h1>
             <p className="text-xs text-[#7A746B] mt-1">
-              คอลเลกชันพรรณไม้มงคลที่คุณบันทึกไว้เพื่อศึกษา วางแผนจัดสวน หรือบูชา
+              คอลเลกชันพันธุ์ไม้มงคลที่คุณบันทึกไว้เพื่อศึกษา วางแผนจัดสวน หรือบูชา
             </p>
           </div>
           <div className="text-xs text-[#7A746B]">
@@ -120,7 +120,7 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({
             ยังไม่มีไม้มงคลในรายการโปรด
           </h2>
           <p className="text-xs text-[#7A746B] max-w-sm mx-auto">
-            คุณสามารถกดไอคอนหัวใจบนการ์ดพรรณไม้ใดก็ได้ในฐานข้อมูล เพื่อบันทึกพรรณไม้ที่คุณสนใจไว้ที่นี่
+            คุณสามารถกดไอคอนหัวใจบนการ์ดพันธุ์ไม้ใดก็ได้ในฐานข้อมูล เพื่อบันทึกพันธุ์ไม้ที่คุณสนใจไว้ที่นี่
           </p>
           <button
             onClick={onNavigateToDatabase}

@@ -115,7 +115,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             </h3>
             <p className="text-xs text-[#A8B89A] mt-0.5">
               {mode === 'login' && 'เข้าถึงไม้มงคลของฉันและรับคำแนะนำเฉพาะคุณ'}
-              {mode === 'register' && 'สร้างบัญชีเพื่อบันทึกและจัดการพรรณไม้มงคล'}
+              {mode === 'register' && 'สร้างบัญชีเพื่อบันทึกและจัดการพันธุ์ไม้มงคล'}
               {mode === 'forgot' && 'กรอกอีเมลเพื่อรับลิงก์รีเซ็ตรหัสผ่าน'}
             </p>
           </div>

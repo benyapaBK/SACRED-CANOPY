@@ -44,7 +44,7 @@ export const ContactPage: React.FC<{ currentUser: UserProfile }> = ({ currentUse
   const shareSite = async () => {
     const url = window.location.origin;
     try {
-      if (navigator.share) await navigator.share({ title: 'SACRED CANOPY', text: 'คลังความรู้พรรณไม้มงคลไทย', url });
+      if (navigator.share) await navigator.share({ title: 'SACRED CANOPY', text: 'คลังความรู้พันธุ์ไม้มงคลไทย', url });
       else {
         await navigator.clipboard.writeText(url);
         setShareFeedback('คัดลอกลิงก์เว็บไซต์แล้วครับ 🌱 ' + url);
@@ -233,14 +233,14 @@ export const ContactPage: React.FC<{ currentUser: UserProfile }> = ({ currentUse
             <div className="rounded-2xl border border-[#EEE7DA] bg-white p-5 shadow-sm">
               <h3 className="text-sm font-bold text-[#183D2B] mb-3">ติดต่อเรื่องใดได้บ้าง</h3>
               <ul className="space-y-2.5 text-xs text-[#49382C]">
-                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-[#A48545] shrink-0" /><span>แจ้งชื่อพรรณไม้หรือรายละเอียดที่อาจคลาดเคลื่อน</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-[#A48545] shrink-0" /><span>แจ้งชื่อพันธุ์ไม้หรือรายละเอียดที่อาจคลาดเคลื่อน</span></li>
                 <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-[#A48545] shrink-0" /><span>เสนอแหล่งอ้างอิงหรือบทความทางพฤกษศาสตร์</span></li>
                 <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-[#A48545] shrink-0" /><span>แจ้งปัญหาการใช้งานและข้อเสนอแนะ</span></li>
               </ul>
             </div>
             <div className="rounded-2xl border border-[#C6A96B]/40 bg-[#F4EEDC] p-5">
               <div className="flex items-center gap-2 text-[#183D2B] font-bold text-sm"><Clock className="w-4 h-4 text-[#A48545]" />การตอบกลับ</div>
-              <p className="text-xs text-[#49382C] leading-relaxed mt-2">ทีมงานจะตรวจสอบข้อความตามลำดับความสำคัญ หากเป็นการแก้ไขข้อมูลพรรณไม้ โปรดระบุชื่อไทยหรือรหัสพรรณไม้และแนบแหล่งอ้างอิงเพื่อช่วยให้ตรวจสอบได้รวดเร็วขึ้น</p>
+              <p className="text-xs text-[#49382C] leading-relaxed mt-2">ทีมงานจะตรวจสอบข้อความตามลำดับความสำคัญ หากเป็นการแก้ไขข้อมูลพันธุ์ไม้ โปรดระบุชื่อไทยหรือรหัสพันธุ์ไม้และแนบแหล่งอ้างอิงเพื่อช่วยให้ตรวจสอบได้รวดเร็วขึ้น</p>
             </div>
           </div>
         </div>
@@ -360,7 +360,7 @@ export const ContactPage: React.FC<{ currentUser: UserProfile }> = ({ currentUse
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={5}
-                  placeholder="พิมพ์ข้อความ รายละเอียดพรรณไม้ หรือข้อเสนอแนะที่ต้องการแจ้ง..."
+                  placeholder="พิมพ์ข้อความ รายละเอียดพันธุ์ไม้ หรือข้อเสนอแนะที่ต้องการแจ้ง..."
                   className="w-full text-xs p-2.5 rounded-lg border border-[#EEE7DA] focus:border-[#C6A96B] focus:outline-none"
                   required
                 />
@@ -416,7 +416,7 @@ export const ContactPage: React.FC<{ currentUser: UserProfile }> = ({ currentUse
       <section className="mt-10 grid grid-cols-1 items-center gap-5 rounded-2xl border border-[#C6A96B]/40 bg-white p-5 shadow-sm sm:grid-cols-[1fr_auto] sm:p-7">
         <div className="flex items-start gap-4">
           <img src="/mascot/04_tonkla_present_knowledge.png" alt="น้องต้นกล้าแนะนำเว็บไซต์" className="h-24 w-24 shrink-0 object-contain sm:h-32 sm:w-32" style={{ transform: 'scaleX(-1)' }}/>
-          <div className="min-w-0"><span className="text-[10px] font-bold uppercase tracking-widest text-[#A48545]">SHARE SACRED CANOPY</span><h2 className="mt-1 text-xl font-bold text-[#183D2B]">ชวนเพื่อนมารู้จักไม้มงคลไทย</h2><p className="mt-2 text-sm leading-relaxed text-[#7A746B]">สแกน QR Code หรือแชร์ลิงก์เว็บไซต์ให้คนที่สนใจพรรณไม้ คติความเชื่อ และการดูแลต้นไม้ครับ</p><p className="mt-2 break-all rounded-lg bg-[#FAF7F0] p-2 text-xs text-[#49382C]">{typeof window !== 'undefined' ? window.location.origin : 'SACRED CANOPY'}</p>
+          <div className="min-w-0"><span className="text-[10px] font-bold uppercase tracking-widest text-[#A48545]">SHARE SACRED CANOPY</span><h2 className="mt-1 text-xl font-bold text-[#183D2B]">ชวนเพื่อนมารู้จักไม้มงคลไทย</h2><p className="mt-2 text-sm leading-relaxed text-[#7A746B]">สแกน QR Code หรือแชร์ลิงก์เว็บไซต์ให้คนที่สนใจพันธุ์ไม้ คติความเชื่อ และการดูแลต้นไม้ครับ</p><p className="mt-2 break-all rounded-lg bg-[#FAF7F0] p-2 text-xs text-[#49382C]">{typeof window !== 'undefined' ? window.location.origin : 'SACRED CANOPY'}</p>
             <div className="mt-3 flex flex-wrap gap-2"><button onClick={() => void copySiteLink()} className="inline-flex items-center gap-1.5 rounded-lg bg-[#183D2B] px-3 py-2 text-xs font-bold text-white"><Copy className="h-3.5 w-3.5"/>คัดลอกลิงก์</button><button onClick={() => void shareSite()} className="inline-flex items-center gap-1.5 rounded-lg border border-[#C6A96B]/60 px-3 py-2 text-xs font-bold text-[#183D2B]"><Share2 className="h-3.5 w-3.5"/>แชร์เว็บไซต์</button></div>
             {shareFeedback && <p role="status" className="mt-2 text-xs text-[#A48545]">{shareFeedback}</p>}
           </div>

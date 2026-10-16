@@ -53,7 +53,7 @@ export const SAMPLE_PLANTS_DATA: Plant[] = [
     references: [
       {
         title: 'สารานุกรมพืชในประเทศไทย (ฉบับเฉลิมพระเกียรติ)',
-        author: 'สำนักงานหอพรรณไม้ กรมอุทยานแห่งชาติ สัตว์ป่า และพันธุ์พืช',
+        author: 'สำนักงานหอพันธุ์ไม้ กรมอุทยานแห่งชาติ สัตว์ป่า และพันธุ์พืช',
         url: 'https://www.dnp.go.th/botany',
         verifiedDate: '2026-03-15',
       },
@@ -117,7 +117,7 @@ export const SAMPLE_PLANTS_DATA: Plant[] = [
     images: ['/images/hero_sacred_banyan_canopy_1791992156867.jpg'],
     references: [
       {
-        title: 'พรรณไม้ในวรรณคดีและพุทธประวัติ',
+        title: 'พันธุ์ไม้ในวรรณคดีและพุทธประวัติ',
         author: 'หอสมุดแห่งชาติ กรมศิลปากร',
         verifiedDate: '2026-02-10',
       },
@@ -653,7 +653,7 @@ export const SAMPLE_PLANTS_DATA: Plant[] = [
     images: ['/images/hero_sacred_banyan_canopy_1791992156867.jpg'],
     references: [
       {
-        title: 'พรรณไม้ปาล์มและการจัดภูมิทัศน์เขตร้อน',
+        title: 'พันธุ์ไม้ปาล์มและการจัดภูมิทัศน์เขตร้อน',
         author: 'สมาคมภูมิสถาปนิกประเทศไทย',
         verifiedDate: '2026-03-01',
       },
@@ -796,7 +796,7 @@ export const SAMPLE_PLANTS_DATA: Plant[] = [
       petToxicity: '',
       petDetail: 'ปลอดภัยต่อสัตว์เลี้ยง ไม่เป็นพิษหากสัตว์สัมผัสหรือดมใกล้ๆ',
       toxicParts: '',
-      safetyReference: 'สมาคมผู้ปลูกกระบองเพชรและไม้อวบน้ำแห่งประเทศไทย และหอพรรณไม้ Addrun',
+      safetyReference: 'สมาคมผู้ปลูกกระบองเพชรและไม้อวบน้ำแห่งประเทศไทย และหอพันธุ์ไม้ Addrun',
     },
     suitability: {
       condo: true,
@@ -817,8 +817,8 @@ export const SAMPLE_PLANTS_DATA: Plant[] = [
     source: 'https://data.addrun.org/plant/archives/545-echinopsis-calochlora-k-schum',
     references: [
       {
-        title: 'Echinopsis calochlora K.Schum. ข้อมูลพรรณไม้ดาวล้อมเดือน',
-        author: 'ฐานข้อมูลพรรณไม้ Addrun.org',
+        title: 'Echinopsis calochlora K.Schum. ข้อมูลพันธุ์ไม้ดาวล้อมเดือน',
+        author: 'ฐานข้อมูลพันธุ์ไม้ Addrun.org',
         url: 'https://data.addrun.org/plant/archives/545-echinopsis-calochlora-k-schum',
         verifiedDate: '2026-10-13',
       },
@@ -892,7 +892,7 @@ export const SAMPLE_PLANTS_DATA: Plant[] = [
       petToxicity: '',
       petDetail: 'ปลอดภัยต่อสัตว์เลี้ยง หนามอ่อนนุ่มไม่ทิ่มแทงเป็นอันตราย',
       toxicParts: '',
-      safetyReference: 'หอพรรณไม้ Addrun.org และคู่มือแคคตัสปลอดภัย',
+      safetyReference: 'หอพันธุ์ไม้ Addrun.org และคู่มือแคคตัสปลอดภัย',
     },
     suitability: {
       condo: true,
@@ -913,8 +913,8 @@ export const SAMPLE_PLANTS_DATA: Plant[] = [
     source: 'https://data.addrun.org/plant/archives/975-parodia-leninghausii-k-schum-f-h-brandt',
     references: [
       {
-        title: 'Parodia leninghausii (K.Schum.) F.H.Brandt ข้อมูลพรรณไม้แคคตัส',
-        author: 'ฐานข้อมูลพรรณไม้ Addrun.org',
+        title: 'Parodia leninghausii (K.Schum.) F.H.Brandt ข้อมูลพันธุ์ไม้แคคตัส',
+        author: 'ฐานข้อมูลพันธุ์ไม้ Addrun.org',
         url: 'https://data.addrun.org/plant/archives/975-parodia-leninghausii-k-schum-f-h-brandt',
         verifiedDate: '2026-10-13',
       },
@@ -988,7 +988,7 @@ export const SAMPLE_PLANTS_DATA: Plant[] = [
       petToxicity: '1.อาการทางระบบทางเดินอาหาร หากสุนัขหรือแมวไปกัดแทะ น้ำยางจะทำให้น้ำลายไหลยืดออเซาะ เกิดแผลพุพองในช่องปากและลิ้น คลื่นไส้ อาเจียน ท้องเสีย และเกิดภาวะทางเดินอาหารอักเสบรุนแรง\n2.การสัมผัสทางร่างกาย สัตว์เลี้ยงจะแสดงอาการแสบร้อนตามผิวหนัง อุ้งเท้า หรือหากเข้าตาจะทำให้ตาปิด ร้องด้วยความเจ็บปวด และพยายามเอาอุ้งเท้าตะกุยตาตลอดเวลา',
       petDetail: 'น้ำยางสีขาวข้นคล้ายน้ำนมมีพิษระคายเคืองสูงต่อเยื่อบุทางเดินอาหารและผิวหนังสัตว์เลี้ยง',
       toxicParts: 'เนื่องจากพืชชนิดนี้จัดอยู่ในตระกูลสลัดไดหรือยูโฟเบีย (Euphorbia) ซึ่งภายในลำต้นและกิ่งก้านจะมี "น้ำยางสีขาวข้นคล้ายน้ำนม" (Milky Latex Sap) ที่มีฤทธิ์เป็นพิษและระคายเคืองสูง',
-      safetyReference: 'หอพรรณไม้ Addrun.org และศูนย์ข้อมูลพิษวิทยา',
+      safetyReference: 'หอพันธุ์ไม้ Addrun.org และศูนย์ข้อมูลพิษวิทยา',
     },
     suitability: {
       condo: true,
@@ -1009,8 +1009,8 @@ export const SAMPLE_PLANTS_DATA: Plant[] = [
     source: 'https://data.addrun.org/plant/archives/461-euphorbia-lactea-haw-f-cristata-grafted-on-euphorbia-neriifolia-l',
     references: [
       {
-        title: 'Euphorbia lactea Haw. F. cristata grafted on Euphorbia neriifolia L. ข้อมูลพรรณไม้',
-        author: 'ฐานข้อมูลพรรณไม้ Addrun.org',
+        title: 'Euphorbia lactea Haw. F. cristata grafted on Euphorbia neriifolia L. ข้อมูลพันธุ์ไม้',
+        author: 'ฐานข้อมูลพันธุ์ไม้ Addrun.org',
         url: 'https://data.addrun.org/plant/archives/461-euphorbia-lactea-haw-f-cristata-grafted-on-euphorbia-neriifolia-l',
         verifiedDate: '2026-10-13',
       },

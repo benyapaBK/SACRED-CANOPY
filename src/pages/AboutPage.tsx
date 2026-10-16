@@ -105,7 +105,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
           </p>
           <ul className="list-disc pl-5 space-y-1.5 text-xs text-[#A8B89A]">
             <li>
-              <strong>ข้อมูลทางพฤกษศาสตร์และการดูแล</strong>: ทวนสอบจากหอพรรณไม้ กรมอุทยานแห่งชาติฯ และสมาคมพฤกษศาสตร์
+              <strong>ข้อมูลทางพฤกษศาสตร์และการดูแล</strong>: ทวนสอบจากหอพันธุ์ไม้ กรมอุทยานแห่งชาติฯ และสมาคมพฤกษศาสตร์
             </li>
             <li>
               <strong>ข้อมูลความปลอดภัยและพิษวิทยา</strong>: อ้างอิงฐานข้อมูลสากล ASPCA Animal Poison Control, NASA Clean Air Study และกระทรวงสาธารณสุข
@@ -134,7 +134,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
           </div>
           <div className="bg-white p-5 rounded-xl border border-[#EEE7DA] space-y-2">
             <span className="text-[11px] font-semibold text-[#A48545] uppercase tracking-wider">
-              งานทวนสอบพรรณไม้และคติชนวิทยา
+              งานทวนสอบพันธุ์ไม้และคติชนวิทยา
             </span>
             <h3 className="text-sm font-bold text-[#183D2B]">กองบรรณาธิการพฤกษศาสตร์และวัฒนธรรม</h3>
             <p className="text-xs text-[#7A746B] leading-relaxed">

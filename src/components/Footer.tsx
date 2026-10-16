@@ -65,7 +65,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenDisclaimer }) 
                   onClick={() => onNavigate('categories')}
                   className="hover:text-[#C6A96B] transition-colors"
                 >
-                  หมวดหมู่หลัก 8 พรรณ
+                  หมวดหมู่หลัก 8 พันธุ์
                 </button>
               </li>
               <li>

@@ -101,7 +101,7 @@ export function announcementKindLabel(kind?: string): string {
     case 'maintenance': return 'แจ้งปรับปรุงระบบ';
     case 'new-plants':
     case 'new_plants':
-    case 'newplants': return 'พรรณไม้ใหม่';
+    case 'newplants': return 'พันธุ์ไม้ใหม่';
     case 'news': return 'ข่าวเว็บไซต์';
     default: return 'กิจกรรม';
   }

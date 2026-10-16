@@ -99,12 +99,12 @@ export const BeliefsPage: React.FC<BeliefsPageProps> = ({
       {/* Plants matching this belief */}
       <div className="space-y-6">
         <div className="text-sm font-bold text-[#183D2B]">
-          ไม้มงคลที่เสริมด้าน{activeBelief.title} ({beliefPlants.length} พรรณไม้)
+          ไม้มงคลที่เสริมด้าน{activeBelief.title} ({beliefPlants.length} พันธุ์ไม้)
         </div>
 
         {beliefPlants.length === 0 ? (
           <div className="bg-white p-8 rounded-xl border border-[#EEE7DA] text-center text-xs text-[#7A746B]">
-            ยังไม่มีพรรณไม้ที่จัดอยู่ในกลุ่มความเชื่อนี้
+            ยังไม่มีพันธุ์ไม้ที่จัดอยู่ในกลุ่มความเชื่อนี้
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -171,7 +171,7 @@ class StoreService {
           email: 'surachai.p@botany.ac.th',
           subject: 'เสนอเพิ่มเติมข้อมูลงานวิจัยเรื่องสารสกัดจากดอกกรรณิการ์',
           category: 'เสนอเพิ่มข้อมูลต้นไม้',
-          message: 'ขอชื่นชมโครงการฐานข้อมูลครับ มีเอกสารการทดสอบฤทธิ์ต้านอนุมูลอิสระของกรรณิการ์และกันเกราจากหอพรรณไม้ ยินดีแบ่งปันให้อ้างอิงเพิ่มเติมครับ',
+          message: 'ขอชื่นชมโครงการฐานข้อมูลครับ มีเอกสารการทดสอบฤทธิ์ต้านอนุมูลอิสระของกรรณิการ์และกันเกราจากหอพันธุ์ไม้ ยินดีแบ่งปันให้อ้างอิงเพิ่มเติมครับ',
           status: 'processing',
           createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
         }
@@ -573,7 +573,7 @@ class StoreService {
   public clearAllPlants() {
     this.plants = [];
     this.savePlants();
-    this.logAction('CLEAR_ALL_PLANTS', 'plant', 'ALL', 'ล้างข้อมูลพรรณไม้ทั้งหมดในระบบเพื่อเตรียมนำเข้าใหม่');
+    this.logAction('CLEAR_ALL_PLANTS', 'plant', 'ALL', 'ล้างข้อมูลพันธุ์ไม้ทั้งหมดในระบบเพื่อเตรียมนำเข้าใหม่');
     this.notify();
   }
 
@@ -796,7 +796,7 @@ class StoreService {
     void this.persistCollection('articles', this.articles, (row) => row.articleId);
         }
       } else {
-        return { success: false, importedCount: 0, errors: ['โครงสร้างไฟล์ JSON ไม่ถูกต้อง ไม่พบชุดข้อมูลพรรณไม้'] };
+        return { success: false, importedCount: 0, errors: ['โครงสร้างไฟล์ JSON ไม่ถูกต้อง ไม่พบชุดข้อมูลพันธุ์ไม้'] };
       }
 
       for (const item of plantsToImport) {
@@ -837,9 +837,9 @@ class StoreService {
           categoryCode: catCode.replace('cat-', ''),
           growthType: item.growthType || item.characteristics?.growthType || '',
           careLevel: item.careLevel || 'ง่าย',
-          description: item.description || item.general || `พรรณไม้มงคล ${thaiName} ทรงคุณค่าทางวัฒนธรรมและพฤกษศาสตร์`,
+          description: item.description || item.general || `พันธุ์ไม้มงคล ${thaiName} ทรงคุณค่าทางวัฒนธรรมและพฤกษศาสตร์`,
           characteristics: {
-            general: item.characteristics?.general || item.general || 'พรรณไม้สมบูรณ์',
+            general: item.characteristics?.general || item.general || 'พันธุ์ไม้สมบูรณ์',
             leaf: item.characteristics?.leaf || item.leaf || 'ตามลักษณะสายพันธุ์',
             stem: item.characteristics?.stem || item.stem || '',
             flower: item.characteristics?.flower || item.flower || '',
@@ -883,7 +883,7 @@ class StoreService {
             petDetail: item.safety?.petDetail || item.petDetail || '',
             toxicParts: item.safety?.toxicParts || item.toxicParts || '',
             symptoms: item.safety?.symptoms || item.symptoms || '',
-            safetyReference: item.safety?.safetyReference || 'หอพรรณไม้และศูนย์ข้อมูลพิษวิทยา',
+            safetyReference: item.safety?.safetyReference || 'หอพันธุ์ไม้และศูนย์ข้อมูลพิษวิทยา',
           },
           suitability: {
             condo: item.suitability?.condo ?? (item.condo === 'ใช่' || item.condo === true),
@@ -903,7 +903,7 @@ class StoreService {
           imageCredit: item.imageCredit || '',
           source: item.source || '',
           sourceUrl: item.sourceUrl || item.source || '',
-          references: item.references || (item.source ? [{ title: `${sciName} ข้อมูลพรรณไม้`, author: 'หอพรรณไม้', url: item.source, verifiedDate: new Date().toISOString().slice(0, 10) }] : [{ title: 'ฐานข้อมูลพรรณไม้นำเข้า', author: 'ผู้ดูแลระบบ', verifiedDate: new Date().toISOString().slice(0, 10) }]),
+          references: item.references || (item.source ? [{ title: `${sciName} ข้อมูลพันธุ์ไม้`, author: 'หอพันธุ์ไม้', url: item.source, verifiedDate: new Date().toISOString().slice(0, 10) }] : [{ title: 'ฐานข้อมูลพันธุ์ไม้นำเข้า', author: 'ผู้ดูแลระบบ', verifiedDate: new Date().toISOString().slice(0, 10) }]),
           status: item.status || 'published',
           isFeatured: item.isFeatured ?? true,
           isNew: item.isNew ?? true,
@@ -990,9 +990,9 @@ class StoreService {
           family: getCol('วงศ์') || getCol('family') || 'วงศ์พืชไทย',
           otherNames: (getCol('ชื่ออื่น') || '').split(';').map((s) => s.trim()).filter(Boolean),
           categoryId: cleanCat,
-          description: getCol('คำอธิบาย') || getCol('description') || `พรรณไม้มงคล ${thaiName} นำเข้าสู่ระบบสารสนเทศ`,
+          description: getCol('คำอธิบาย') || getCol('description') || `พันธุ์ไม้มงคล ${thaiName} นำเข้าสู่ระบบสารสนเทศ`,
           characteristics: {
-            general: getCol('ลักษณะทั่วไป') || 'พรรณไม้สมบูรณ์',
+            general: getCol('ลักษณะทั่วไป') || 'พันธุ์ไม้สมบูรณ์',
             leaf: getCol('ใบ') || 'ตามลักษณะสายพันธุ์',
             stem: getCol('ลำต้น') || 'ตามลักษณะสายพันธุ์',
             flower: getCol('ดอก') || 'ตามลักษณะสายพันธุ์',
@@ -1021,7 +1021,7 @@ class StoreService {
             caution: getCol('ข้อควรระวัง') || 'ปลอดภัย',
             toxicityHuman: 'ปลอดภัย',
             toxicityPets: (getCol('สัตว์เลี้ยง') as any) || 'ปลอดภัยต่อสุนัขและแมว',
-            safetyReference: 'หอพรรณไม้ กรมอุทยานแห่งชาติฯ',
+            safetyReference: 'หอพันธุ์ไม้ กรมอุทยานแห่งชาติฯ',
           },
           spaceType: (getCol('พื้นที่') as any) || 'บ้านเดี่ยว/สวนกว้าง',
           careLevel: (getCol('การดูแล') as any) || 'ดูแลง่าย',
@@ -1061,7 +1061,7 @@ class StoreService {
       return '\uFEFF' + [headers.map(quote).join(','), ...rows.map((row) => row.join(','))].join('\r\n');
     }
     const headers = [
-      'รหัสพรรณไม้',
+      'รหัสพันธุ์ไม้',
       'ชื่อไทย',
       'ชื่ออังกฤษ',
       'ชื่อวิทยาศาสตร์',
@@ -1102,7 +1102,7 @@ class StoreService {
 
   public generateCSVTemplate(): string {
     const headers = [
-      'รหัสพรรณไม้',
+      'รหัสพันธุ์ไม้',
       'ชื่อไทย',
       'ชื่ออังกฤษ',
       'ชื่อวิทยาศาสตร์',

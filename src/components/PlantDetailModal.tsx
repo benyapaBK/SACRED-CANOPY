@@ -139,7 +139,7 @@ export const PlantDetailModal: React.FC<PlantDetailModalProps> = ({
                 }}
               />
               <div className="absolute bottom-2 left-2 bg-[#183D2B]/90 text-white text-[11px] px-2 py-0.5 rounded font-mono">
-                รหัสพรรณไม้: {plant.plantId}
+                รหัสพันธุ์ไม้: {plant.plantId}
               </div>
               {plant.imageCredit && (
                 <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white/90 text-[10px] px-2 py-0.5 rounded flex items-center gap-1">
@@ -300,7 +300,7 @@ export const PlantDetailModal: React.FC<PlantDetailModalProps> = ({
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-[#EEE7DA] space-y-1">
                   <h4 className="text-xs font-bold text-[#183D2B] uppercase tracking-wider">จุดเด่นทางสายพันธุ์ (Botanical Highlight)</h4>
-                  <p className="text-xs text-[#49382C] leading-relaxed">{plant.characteristics.highlight || 'พรรณไม้มงคลทรงคุณค่า'}</p>
+                  <p className="text-xs text-[#49382C] leading-relaxed">{plant.characteristics.highlight || 'พันธุ์ไม้มงคลทรงคุณค่า'}</p>
                 </div>
               </div>
             </div>
@@ -584,7 +584,7 @@ export const PlantDetailModal: React.FC<PlantDetailModalProps> = ({
           {relatedPlants.length > 0 && (
             <div className="pt-4 border-t border-[#EEE7DA]">
               <h4 className="text-xs font-bold text-[#183D2B] uppercase tracking-wider mb-3">
-                พรรณไม้ที่เกี่ยวข้องกันในหมวดหมู่นี้
+                พันธุ์ไม้ที่เกี่ยวข้องกันในหมวดหมู่นี้
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {relatedPlants.map((rel) => (
